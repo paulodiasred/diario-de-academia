@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Play, Pause, RotateCcw, TrendingUp, History } from "lucide-react";
+import { ArrowLeft, Play, Pause, RotateCcw, TrendingUp, History, Check } from "lucide-react";
 import { Exercicio, grupoIcons, TreinoRegistro } from "@/data/treino";
 import { CircularTimer } from "./CircularTimer";
 import { SeriesTracker } from "./SeriesTracker";
@@ -88,7 +88,36 @@ export function ExerciseDetail({
     }
   };
 
-  const historico = registros.slice(-6).reverse();
+  const historico = useMemo(() => {
+    const hoje = new Date();
+    const seteDiasAtras = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    // Filtrar registros dos últimos 7 dias e concluídos
+    const registrosFiltrados = registros.filter(r => 
+      new Date(r.data) >= seteDiasAtras && r.concluida
+    );
+    
+    // Agrupar por data e calcular média
+    const agrupadoPorData = registrosFiltrados.reduce((acc, r) => {
+      const dataStr = new Date(r.data).toLocaleDateString("pt-BR");
+      if (!acc[dataStr]) {
+        acc[dataStr] = { pesos: [], data: r.data };
+      }
+      acc[dataStr].pesos.push(r.peso);
+      return acc;
+    }, {} as Record<string, { pesos: number[], data: string }>);
+    
+    // Calcular médias e ordenar por data decrescente
+    return Object.entries(agrupadoPorData)
+      .map(([dataStr, { pesos, data }]) => ({
+        data: data,
+        dataStr,
+        media: pesos.reduce((sum, p) => sum + p, 0) / pesos.length,
+        series: pesos.length
+      }))
+      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+      .slice(0, 5); // Últimos 5 dias
+  }, [registros]);
 
   return (
     <motion.div
@@ -190,20 +219,23 @@ export function ExerciseDetail({
         <AnimatePresence>
           {historico.length > 0 ? (
             <div className="space-y-2">
-              {historico.map((r, i) => (
+              {historico.map((item, i) => (
                 <motion.div
-                  key={r.id || i}
+                  key={item.dataStr}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="flex justify-between items-center p-3 bg-secondary/20 rounded-xl"
+                  className="flex justify-between items-center p-3 bg-success/20 border border-success/30 rounded-xl"
                 >
                   <span className="text-muted-foreground text-sm">
-                    {new Date(r.data).toLocaleDateString("pt-BR")}
+                    {item.dataStr}
                   </span>
-                  <span className="font-semibold">
-                    {r.serie}ª série - <span className="text-primary">{r.peso}kg</span>
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-success">
+                      Média - <span className="text-primary">{item.media.toFixed(1)}kg</span> ({item.series} séries)
+                    </span>
+                    <Check className="w-4 h-4 text-success" />
+                  </div>
                 </motion.div>
               ))}
             </div>

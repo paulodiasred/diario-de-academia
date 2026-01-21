@@ -20,7 +20,7 @@ export function SeriesTracker({ seriesFeitas, onConcluirSerie, disabled }: Serie
             whileTap={{ scale: 0.95 }}
             className={`relative p-4 rounded-2xl font-semibold transition-all ${
               feita
-                ? "bg-gradient-to-br from-success to-success/80 text-success-foreground"
+                ? "bg-gradient-to-br from-primary to-accent text-primary-foreground"
                 : disabled
                 ? "bg-secondary/30 text-muted-foreground cursor-not-allowed"
                 : "glass-card hover:border-primary/50 text-foreground"
