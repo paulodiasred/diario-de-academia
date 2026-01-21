@@ -139,6 +139,50 @@ export function ExerciseDetail({
     }
   };
 
+  const concluirExercicio = async () => {
+    const pesoNum = parseFloat(peso);
+    if (!pesoNum || pesoNum <= 0) {
+      toast.error("Digite um peso válido");
+      return;
+    }
+
+    try {
+      // Marcar todas as séries não concluídas
+      const promises = [];
+      const novasSeries = [...seriesFeitas];
+
+      for (let i = 0; i < 4; i++) {
+        if (!seriesFeitas[i]) {
+          promises.push(
+            onSalvarRegistro({
+              exercicio: exercicio.exercicio,
+              peso: pesoNum,
+              serie: i + 1,
+              dia: exercicio.dia,
+              concluida: true,
+            })
+          );
+          novasSeries[i] = true;
+        }
+      }
+
+      await Promise.all(promises);
+      setSeriesFeitas(novasSeries);
+      await reloadRegistros();
+
+      toast.success("Exercício concluído com sucesso! 💪");
+
+      // Voltar para a lista após concluir
+      setTimeout(() => {
+        onVoltar();
+      }, 1500);
+
+    } catch (error) {
+      console.error("Erro ao concluir exercício:", error);
+      toast.error("Erro ao concluir exercício");
+    }
+  };
+
   const historico = useMemo(() => {
     const hoje = new Date();
     const seteDiasAtras = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -259,6 +303,23 @@ export function ExerciseDetail({
           onConcluirSerie={concluirSerie}
           disabled={!peso || parseFloat(peso) <= 0}
         />
+
+        {/* Botão Concluir Exercício */}
+        {seriesFeitas.filter(feita => feita).length >= 3 && !seriesFeitas.every(feita => feita) && (
+          <div className="mt-4 pt-4 border-t border-border/50">
+            <Button
+              onClick={concluirExercicio}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+              disabled={!peso || parseFloat(peso) <= 0}
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Concluir Exercício
+            </Button>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Marca todas as séries restantes como concluídas
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Histórico */}
