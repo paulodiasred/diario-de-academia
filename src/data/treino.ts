@@ -7,6 +7,7 @@ export interface Exercicio {
 
 export interface TreinoRegistro {
   id?: string;
+  userId: string;
   exercicio: string;
   peso: number;
   serie: number;

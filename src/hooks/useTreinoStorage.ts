@@ -1,19 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { collection, addDoc, getDocs, query, where, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { TreinoRegistro } from "@/data/treino";
+import { useAuth } from "./useAuth";
 
 export function useTreinoStorage() {
+  const { user } = useAuth();
   const [registros, setRegistros] = useState<TreinoRegistro[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadRegistros();
-  }, []);
+  const loadRegistros = useCallback(async () => {
+    if (!user) return;
 
-  const loadRegistros = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, "registros"));
+      const q = query(
+        collection(db, "registros"),
+        where("userId", "==", user.uid),
+        orderBy("data", "desc")
+      );
+      const querySnapshot = await getDocs(q);
       const data = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -25,12 +30,24 @@ export function useTreinoStorage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const salvarRegistro = async (registro: Omit<TreinoRegistro, "id" | "data">): Promise<TreinoRegistro> => {
+  useEffect(() => {
+    if (user) {
+      loadRegistros();
+    } else {
+      setRegistros([]);
+      setLoading(false);
+    }
+  }, [user, loadRegistros]);
+
+  const salvarRegistro = async (registro: Omit<TreinoRegistro, "id" | "data" | "userId">): Promise<TreinoRegistro> => {
+    if (!user) throw new Error("Usuário não autenticado");
+
     try {
       const docRef = await addDoc(collection(db, "registros"), {
         ...registro,
+        userId: user.uid,
         data: Timestamp.now(),
         concluida: registro.concluida ?? true
       });
@@ -38,11 +55,12 @@ export function useTreinoStorage() {
       const novoRegistro: TreinoRegistro = {
         id: docRef.id,
         ...registro,
+        userId: user.uid,
         data: new Date().toISOString(),
         concluida: registro.concluida ?? true
       };
 
-      setRegistros(prev => [...prev, novoRegistro]);
+      setRegistros(prev => [novoRegistro, ...prev]); // Add to beginning since ordered by date desc
       return novoRegistro;
     } catch (error) {
       console.error("Erro ao salvar registro:", error);

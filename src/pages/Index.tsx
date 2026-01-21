@@ -1,11 +1,13 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Dumbbell, Flame, Calendar, ArrowLeft, ChevronRight } from "lucide-react";
+import { Dumbbell, Flame, Calendar, ArrowLeft, ChevronRight, LogOut } from "lucide-react";
 import { treino, dias } from "@/data/treino";
 import { useTreinoStorage } from "@/hooks/useTreinoStorage";
+import { useAuth } from "@/hooks/useAuth";
 import { DaySelector } from "@/components/DaySelector";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import { ExerciseDetail } from "@/components/ExerciseDetail";
+import { Button } from "@/components/ui/button";
 import type { Exercicio } from "@/data/treino";
 
 const Index = () => {
@@ -13,6 +15,15 @@ const Index = () => {
   const [exercicioSelecionado, setExercicioSelecionado] = useState<Exercicio | null>(null);
   
   const { salvarRegistro, getRegistrosPorExercicio, getUltimoPeso, loading, reloadRegistros } = useTreinoStorage();
+  const { logout, user } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+    }
+  };
 
   const exerciciosDoDia = useMemo(() => {
     return selectedDay ? treino.filter((t) => t.dia === selectedDay) : [];
@@ -44,14 +55,25 @@ const Index = () => {
             className="space-y-6"
           >
             <div className="pt-4 pb-2">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-primary">
-                  <Dumbbell className="w-6 h-6 text-primary-foreground" />
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-primary">
+                    <Dumbbell className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold">Diário de Academia</h1>
+                    <p className="text-muted-foreground text-sm">Selecione o dia do treino</p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold">Diário de Academia</h1>
-                  <p className="text-muted-foreground text-sm">Selecione o dia do treino</p>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  className="rounded-xl"
+                  title="Sair"
+                >
+                  <LogOut className="w-5 h-5" />
+                </Button>
               </div>
             </div>
             <div className="space-y-3">
