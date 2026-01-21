@@ -41,7 +41,6 @@ export const treino: Exercicio[] = [
   { dia: "Terça", grupo: "Cardio", exercicio: "Cardio (25–30 min)", descanso: 0, series: 1 },
 
   // QUARTA
-  { dia: "Quarta", grupo: "Perna", exercicio: "Extensora", descanso: 60, series: 4 },
   { dia: "Quarta", grupo: "Perna", exercicio: "Leg press", descanso: 90, series: 4 },
   { dia: "Quarta", grupo: "Perna", exercicio: "Cadeira extensora", descanso: 75, series: 4 },
   { dia: "Quarta", grupo: "Perna", exercicio: "Mesa flexora", descanso: 60, series: 4 },
