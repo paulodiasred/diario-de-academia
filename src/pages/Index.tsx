@@ -12,7 +12,7 @@ const Index = () => {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [exercicioSelecionado, setExercicioSelecionado] = useState<Exercicio | null>(null);
   
-  const { salvarRegistro, getRegistrosPorExercicio, getUltimoPeso } = useTreinoStorage();
+  const { salvarRegistro, getRegistrosPorExercicio, getUltimoPeso, loading } = useTreinoStorage();
 
   const exerciciosDoDia = useMemo(() => {
     return selectedDay ? treino.filter((t) => t.dia === selectedDay) : [];
@@ -24,6 +24,17 @@ const Index = () => {
   }, [exerciciosDoDia]);
 
   if (!selectedDay) {
+    if (loading) {
+      return (
+        <div className="min-h-screen p-4 max-w-md mx-auto flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando dados...</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <>
         <div className="p-4 max-w-md mx-auto">
