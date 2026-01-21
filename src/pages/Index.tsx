@@ -14,7 +14,7 @@ const Index = () => {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [exercicioSelecionado, setExercicioSelecionado] = useState<Exercicio | null>(null);
   
-  const { salvarRegistro, getRegistrosPorExercicio, getUltimoPeso, loading, reloadRegistros } = useTreinoStorage();
+  const { salvarRegistro, getRegistrosPorExercicio, getUltimoPeso, loading, reloadRegistros, registros } = useTreinoStorage();
   const { logout, user } = useAuth();
 
   const handleLogout = async () => {
@@ -33,6 +33,23 @@ const Index = () => {
     const grupos = [...new Set(exerciciosDoDia.map((e) => e.grupo))];
     return grupos;
   }, [exerciciosDoDia]);
+
+  // Verifica se um exercício foi totalmente concluído hoje
+  const isExercicioConcluidoHoje = (exercicioNome: string, totalSeries: number) => {
+    const hoje = new Date();
+    const hojeStr = hoje.getFullYear() + '-' + (hoje.getMonth() + 1) + '-' + hoje.getDate();
+    
+    const registrosHoje = registros.filter(r => {
+      const dataRegistro = new Date(r.data);
+      const dataStr = dataRegistro.getFullYear() + '-' + (dataRegistro.getMonth() + 1) + '-' + dataRegistro.getDate();
+      return dataStr === hojeStr && r.exercicio === exercicioNome && r.concluida;
+    });
+
+    // Conta séries únicas concluídas hoje
+    const seriesConcluidas = new Set(registrosHoje.map(r => r.serie)).size;
+    
+    return seriesConcluidas >= totalSeries;
+  };
 
   if (!selectedDay) {
     if (loading) {
@@ -184,6 +201,7 @@ const Index = () => {
                           index={index}
                           ultimoPeso={getUltimoPeso(exercicio.exercicio)}
                           onClick={() => setExercicioSelecionado(exercicio)}
+                          isConcluido={isExercicioConcluidoHoje(exercicio.exercicio, exercicio.series)}
                         />
                       ))}
                   </div>

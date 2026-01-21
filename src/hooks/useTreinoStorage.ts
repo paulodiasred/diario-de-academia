@@ -13,18 +13,43 @@ export function useTreinoStorage() {
     if (!user) return;
 
     try {
-      const q = query(
-        collection(db, "registros"),
-        where("userId", "==", user.uid),
-        orderBy("data", "desc")
-      );
-      const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        data: doc.data().data?.toDate?.()?.toISOString() || doc.data().data
-      })) as TreinoRegistro[];
-      setRegistros(data);
+      // Primeiro tentar com orderBy (requer índice)
+      try {
+        const q = query(
+          collection(db, "registros"),
+          where("userId", "==", user.uid),
+          orderBy("data", "desc")
+        );
+
+        const querySnapshot = await getDocs(q);
+        const data = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          data: doc.data().data?.toDate?.()?.toISOString() || doc.data().data
+        })) as TreinoRegistro[];
+
+        setRegistros(data);
+      } catch (error) {
+        console.warn("Query com orderBy falhou, usando fallback sem orderBy");
+
+        // Fallback: buscar sem orderBy e ordenar no cliente
+        const q = query(
+          collection(db, "registros"),
+          where("userId", "==", user.uid)
+        );
+
+        const querySnapshot = await getDocs(q);
+        const data = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          data: doc.data().data?.toDate?.()?.toISOString() || doc.data().data
+        })) as TreinoRegistro[];
+
+        // Ordenar no cliente
+        data.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
+        setRegistros(data);
+      }
     } catch (error) {
       console.error("Erro ao carregar registros:", error);
     } finally {

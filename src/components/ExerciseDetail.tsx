@@ -29,27 +29,49 @@ export function ExerciseDetail({
   reloadRegistros,
 }: ExerciseDetailProps) {
   const [peso, setPeso] = useState(ultimoPeso?.toString() || "");
-  const [seriesFeitas, setSeriesFeitas] = useState([false, false, false, false]);
+  const [seriesFeitas, setSeriesFeitas] = useState<boolean[]>(() => 
+    new Array(exercicio.series).fill(false)
+  );
   const [tempoRestante, setTempoRestante] = useState(0);
   const [timerAtivo, setTimerAtivo] = useState(false);
 
   const icon = grupoIcons[exercicio.grupo] || "🏋️";
-
   const iniciarDescanso = useCallback(() => {
     setTempoRestante(exercicio.descanso);
     setTimerAtivo(true);
   }, [exercicio.descanso]);
-
-  const pausarTimer = () => {
-    setTimerAtivo(false);
-  };
-
-  const resetarTimer = () => {
-    setTempoRestante(exercicio.descanso);
-    setTimerAtivo(false);
-  };
-
-  useEffect(() => {
+      const historico = useMemo(() => {
+    const hoje = new Date();
+    const seteDiasAtras = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    // Filtrar registros dos últimos 7 dias e concluídos
+    const registrosFiltrados = registros.filter(r => 
+      new Date(r.data) >= seteDiasAtras && r.concluida
+    );
+    
+    // Agrupar por data e calcular média
+    const agrupadoPorData = registrosFiltrados.reduce((acc, r) => {
+      const dataStr = new Date(r.data).toLocaleDateString("pt-BR");
+      if (!acc[dataStr]) {
+        acc[dataStr] = { pesos: [], data: r.data };
+      }
+      acc[dataStr].pesos.push(r.peso);
+      return acc;
+    }, {} as Record<string, { pesos: number[], data: string }>);
+    
+    // Calcular médias e ordenar por data decrescente
+    return Object.entries(agrupadoPorData)
+      .map(([dataStr, { pesos, data }]) => ({
+        data: data,
+        dataStr,
+        media: pesos.reduce((sum, p) => sum + p, 0) / pesos.length,
+        series: pesos.length
+      }))
+      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+      .slice(0, 5); // Últimos 5 dias
+  }, [registros]);
+  
+    useEffect(() => {
     let interval: NodeJS.Timeout;
     if (timerAtivo && tempoRestante > 0) {
       interval = setInterval(() => {
@@ -75,14 +97,91 @@ export function ExerciseDetail({
       const dataStr = dataRegistro.getFullYear() + '-' + (dataRegistro.getMonth() + 1) + '-' + dataRegistro.getDate();
       return dataStr === hojeStr && r.concluida;
     });
-    const novasSeries = [false, false, false, false];
+    const novasSeries = new Array(exercicio.series).fill(false);
     registrosHoje.forEach(r => {
-      if (r.serie >= 1 && r.serie <= 4) {
+      if (r.serie >= 1 && r.serie <= exercicio.series) {
         novasSeries[r.serie - 1] = true;
       }
     });
     setSeriesFeitas(novasSeries);
-  }, [registros]);
+  }, [registros, exercicio.series]);
+
+  // Verifica se o exercício já foi totalmente concluído hoje
+  const isExercicioConcluidoHoje = useMemo(() => {
+    const hoje = new Date();
+    const hojeStr = hoje.getFullYear() + '-' + (hoje.getMonth() + 1) + '-' + hoje.getDate();
+    
+    const registrosHoje = registros.filter(r => {
+      const dataRegistro = new Date(r.data);
+      const dataStr = dataRegistro.getFullYear() + '-' + (dataRegistro.getMonth() + 1) + '-' + dataRegistro.getDate();
+      return dataStr === hojeStr && r.exercicio === exercicio.exercicio && r.concluida;
+    });
+
+    // Conta séries únicas concluídas hoje
+    const seriesConcluidas = new Set(registrosHoje.map(r => r.serie)).size;
+    
+    return seriesConcluidas >= exercicio.series;
+  }, [registros, exercicio]);
+
+  // Se o exercício já foi concluído hoje, mostra mensagem
+  if (isExercicioConcluidoHoje) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 100 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -100 }}
+        className="space-y-6"
+      >
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onVoltar}
+            className="rounded-xl"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-xl font-bold">{exercicio.exercicio}</h1>
+            <p className="text-muted-foreground text-sm">{exercicio.grupo}</p>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-success/20 flex items-center justify-center text-xl">
+            <Check className="w-8 h-8 text-success" />
+          </div>
+        </div>
+
+        {/* Mensagem de concluído */}
+        <div className="glass-card rounded-3xl p-8 text-center">
+          <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Check className="w-8 h-8 text-success" />
+          </div>
+          <h2 className="text-2xl font-bold text-success mb-2">Exercício Concluído! 🎉</h2>
+          <p className="text-muted-foreground mb-6">
+            Você já completou todas as séries deste exercício hoje.
+            <br />
+            Volte amanhã para treiná-lo novamente!
+          </p>
+          <Button onClick={onVoltar} className="bg-gradient-to-r from-primary to-accent">
+            Voltar aos exercícios
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
+
+
+  const pausarTimer = () => {
+    setTimerAtivo(false);
+  };
+
+  const resetarTimer = () => {
+    setTempoRestante(exercicio.descanso);
+    setTimerAtivo(false);
+  };
+
+
 
   const concluirSerie = async (serie: number, desmarcar = false) => {
     if (desmarcar) {
@@ -147,11 +246,11 @@ export function ExerciseDetail({
     }
 
     try {
-      // Marcar todas as séries não concluídas
+      // Marcar todas as séries não concluídas até o número total do exercício
       const promises = [];
       const novasSeries = [...seriesFeitas];
 
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < exercicio.series; i++) {
         if (!seriesFeitas[i]) {
           promises.push(
             onSalvarRegistro({
@@ -183,36 +282,7 @@ export function ExerciseDetail({
     }
   };
 
-  const historico = useMemo(() => {
-    const hoje = new Date();
-    const seteDiasAtras = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000);
-    
-    // Filtrar registros dos últimos 7 dias e concluídos
-    const registrosFiltrados = registros.filter(r => 
-      new Date(r.data) >= seteDiasAtras && r.concluida
-    );
-    
-    // Agrupar por data e calcular média
-    const agrupadoPorData = registrosFiltrados.reduce((acc, r) => {
-      const dataStr = new Date(r.data).toLocaleDateString("pt-BR");
-      if (!acc[dataStr]) {
-        acc[dataStr] = { pesos: [], data: r.data };
-      }
-      acc[dataStr].pesos.push(r.peso);
-      return acc;
-    }, {} as Record<string, { pesos: number[], data: string }>);
-    
-    // Calcular médias e ordenar por data decrescente
-    return Object.entries(agrupadoPorData)
-      .map(([dataStr, { pesos, data }]) => ({
-        data: data,
-        dataStr,
-        media: pesos.reduce((sum, p) => sum + p, 0) / pesos.length,
-        series: pesos.length
-      }))
-      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-      .slice(0, 5); // Últimos 5 dias
-  }, [registros]);
+
 
   return (
     <motion.div
@@ -305,7 +375,11 @@ export function ExerciseDetail({
         />
 
         {/* Botão Concluir Exercício */}
-        {seriesFeitas.filter(feita => feita).length >= 3 && !seriesFeitas.every(feita => feita) && (
+        {(() => {
+          const seriesMarcadas = seriesFeitas.filter(feita => feita).length;
+          const minimoSeries = Math.max(2, Math.ceil(exercicio.series * 0.75)); // Pelo menos 75% ou 2 séries
+          return seriesMarcadas >= minimoSeries && !seriesFeitas.every(feita => feita);
+        })() && (
           <div className="mt-4 pt-4 border-t border-border/50">
             <Button
               onClick={concluirExercicio}
