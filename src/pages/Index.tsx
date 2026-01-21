@@ -94,7 +94,7 @@ const Index = () => {
             onSalvarRegistro={salvarRegistro}
           />
         </div>
-        <footer className="mt-8 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
+        <footer className="mt-4 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
           © 2026 Iron Buddy. Todos os direitos reservados.
         </footer>
       </>
