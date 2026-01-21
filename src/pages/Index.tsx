@@ -12,7 +12,7 @@ const Index = () => {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [exercicioSelecionado, setExercicioSelecionado] = useState<Exercicio | null>(null);
   
-  const { salvarRegistro, getRegistrosPorExercicio, getUltimoPeso, loading } = useTreinoStorage();
+  const { salvarRegistro, getRegistrosPorExercicio, getUltimoPeso, loading, reloadRegistros } = useTreinoStorage();
 
   const exerciciosDoDia = useMemo(() => {
     return selectedDay ? treino.filter((t) => t.dia === selectedDay) : [];
@@ -103,6 +103,7 @@ const Index = () => {
             ultimoPeso={getUltimoPeso(exercicioSelecionado.exercicio)}
             onVoltar={() => setExercicioSelecionado(null)}
             onSalvarRegistro={salvarRegistro}
+            reloadRegistros={reloadRegistros}
           />
         </div>
         <footer className="mt-2 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">

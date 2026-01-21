@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Play, Pause, RotateCcw, TrendingUp, History, Check } from "lucide-react";
 import { Exercicio, grupoIcons, TreinoRegistro } from "@/data/treino";
-import { CircularTimer } from "./CircularTimer";
+import { deleteDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { SeriesTracker } from "./SeriesTracker";
 import { ProgressChart } from "./ProgressChart";
+import { CircularTimer } from "./CircularTimer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -14,7 +16,8 @@ interface ExerciseDetailProps {
   registros: TreinoRegistro[];
   ultimoPeso: number | null;
   onVoltar: () => void;
-  onSalvarRegistro: (registro: { exercicio: string; peso: number; serie: number; dia: string; concluida?: boolean }) => void;
+  onSalvarRegistro: (registro: { exercicio: string; peso: number; serie: number; dia: string; concluida?: boolean }) => Promise<TreinoRegistro>;
+  reloadRegistros: () => Promise<void>;
 }
 
 export function ExerciseDetail({
@@ -23,6 +26,7 @@ export function ExerciseDetail({
   ultimoPeso,
   onVoltar,
   onSalvarRegistro,
+  reloadRegistros,
 }: ExerciseDetailProps) {
   const [peso, setPeso] = useState(ultimoPeso?.toString() || "");
   const [seriesFeitas, setSeriesFeitas] = useState([false, false, false, false]);
@@ -62,29 +66,76 @@ export function ExerciseDetail({
     return () => clearInterval(interval);
   }, [timerAtivo, tempoRestante]);
 
-  const concluirSerie = (serie: number) => {
+  // Inicializar séries baseadas em registros existentes
+  useEffect(() => {
+    const hoje = new Date();
+    const hojeStr = hoje.getFullYear() + '-' + (hoje.getMonth() + 1) + '-' + hoje.getDate();
+    const registrosHoje = registros.filter(r => {
+      const dataRegistro = new Date(r.data);
+      const dataStr = dataRegistro.getFullYear() + '-' + (dataRegistro.getMonth() + 1) + '-' + dataRegistro.getDate();
+      return dataStr === hojeStr && r.concluida;
+    });
+    const novasSeries = [false, false, false, false];
+    registrosHoje.forEach(r => {
+      if (r.serie >= 1 && r.serie <= 4) {
+        novasSeries[r.serie - 1] = true;
+      }
+    });
+    setSeriesFeitas(novasSeries);
+  }, [registros]);
+
+  const concluirSerie = async (serie: number, desmarcar = false) => {
+    if (desmarcar) {
+      // Encontrar e remover o registro da série
+      const registrosDaSerie = registros.filter(r => r.serie === serie && r.concluida);
+      if (registrosDaSerie.length > 0) {
+        // Remover o mais recente
+        const registroMaisRecente = registrosDaSerie.sort((a, b) => 
+          new Date(b.data).getTime() - new Date(a.data).getTime()
+        )[0];
+        
+        try {
+          await deleteDoc(doc(db, "registros", registroMaisRecente.id!));
+          const novasSeries = [...seriesFeitas];
+          novasSeries[serie - 1] = false;
+          setSeriesFeitas(novasSeries);
+          await reloadRegistros();
+          toast.success(`Série ${serie} desmarcada!`);
+        } catch (error) {
+          console.error("Erro ao desmarcar série:", error);
+          toast.error("Erro ao desmarcar série");
+        }
+      }
+      return;
+    }
+
     const pesoNum = parseFloat(peso);
     if (!pesoNum || pesoNum <= 0) {
       toast.error("Digite um peso válido");
       return;
     }
 
-    onSalvarRegistro({
-      exercicio: exercicio.exercicio,
-      peso: pesoNum,
-      serie,
-      dia: exercicio.dia,
-      concluida: true,
-    });
+    try {
+      await onSalvarRegistro({
+        exercicio: exercicio.exercicio,
+        peso: pesoNum,
+        serie,
+        dia: exercicio.dia,
+        concluida: true,
+      });
 
-    const novasSeries = [...seriesFeitas];
-    novasSeries[serie - 1] = true;
-    setSeriesFeitas(novasSeries);
+      const novasSeries = [...seriesFeitas];
+      novasSeries[serie - 1] = true;
+      setSeriesFeitas(novasSeries);
 
-    toast.success(`Série ${serie} concluída!`);
+      toast.success(`Série ${serie} concluída!`);
 
-    if (exercicio.descanso > 0) {
-      iniciarDescanso();
+      if (exercicio.descanso > 0) {
+        iniciarDescanso();
+      }
+    } catch (error) {
+      console.error("Erro ao salvar série:", error);
+      toast.error("Erro ao salvar série");
     }
   };
 

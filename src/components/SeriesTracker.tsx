@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 
 interface SeriesTrackerProps {
   seriesFeitas: boolean[];
-  onConcluirSerie: (serie: number) => void;
+  onConcluirSerie: (serie: number, desmarcar?: boolean) => void;
   disabled: boolean;
 }
 
@@ -15,8 +15,8 @@ export function SeriesTracker({ seriesFeitas, onConcluirSerie, disabled }: Serie
         return (
           <motion.button
             key={serie}
-            onClick={() => !feita && !disabled && onConcluirSerie(serie)}
-            disabled={disabled || feita}
+            onClick={() => !disabled && onConcluirSerie(serie, feita)}
+            disabled={disabled}
             whileTap={{ scale: 0.95 }}
             className={`relative p-4 rounded-2xl font-semibold transition-all ${
               feita

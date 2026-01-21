@@ -27,7 +27,7 @@ export function useTreinoStorage() {
     }
   };
 
-  const salvarRegistro = async (registro: Omit<TreinoRegistro, "id" | "data">) => {
+  const salvarRegistro = async (registro: Omit<TreinoRegistro, "id" | "data">): Promise<TreinoRegistro> => {
     try {
       const docRef = await addDoc(collection(db, "registros"), {
         ...registro,
@@ -73,5 +73,6 @@ export function useTreinoStorage() {
     getRegistrosPorExercicio,
     getUltimoPeso,
     getHistorico,
+    reloadRegistros: loadRegistros,
   };
 }
