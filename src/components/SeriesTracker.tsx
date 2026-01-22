@@ -10,8 +10,8 @@ interface SeriesTrackerProps {
 export function SeriesTracker({ seriesFeitas, onConcluirSerie, disabled }: SeriesTrackerProps) {
   return (
     <div className="grid grid-cols-4 gap-3">
-      {[1, 2, 3, 4].map((serie) => {
-        const feita = seriesFeitas[serie - 1];
+      {seriesFeitas.map((feita, index) => {
+        const serie = index + 1;
         return (
           <motion.button
             key={serie}
