@@ -36,7 +36,6 @@ export interface TreinoRegistro {
 
 export type Exercicio = ExercicioForca | ExercicioCircuito | ExercicioCardio;
 
-
 export const treino: Exercicio[] = [
   // SEGUNDA
   {
@@ -93,7 +92,15 @@ export const treino: Exercicio[] = [
     exercicio: "Corda",
     tipo: "Força",
     descanso: 45,
-    series: 3,
+    series: 4,
+  },
+  {
+    dia: "Segunda",
+    grupo: "Tríceps",
+    exercicio: "Testa com corda",
+    tipo: "Força",
+    descanso: 45,
+    series: 4,
   },
   {
     dia: "Segunda",
@@ -308,7 +315,7 @@ export const treino: Exercicio[] = [
     exercicio: "Crossover",
     tipo: "Força",
     descanso: 40,
-    series: 3,
+    series: 4,
   },
   {
     dia: "Sexta",
@@ -316,7 +323,7 @@ export const treino: Exercicio[] = [
     exercicio: "Crucifixo",
     tipo: "Força",
     descanso: 45,
-    series: 3,
+    series: 4,
   },
   {
     dia: "Sexta",
@@ -332,7 +339,7 @@ export const treino: Exercicio[] = [
     exercicio: "Pullover",
     tipo: "Força",
     descanso: 50,
-    series: 3,
+    series: 4,
   },
   {
     dia: "Sexta",
