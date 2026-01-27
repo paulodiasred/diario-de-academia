@@ -1,6 +1,13 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Dumbbell, Flame, Calendar, ArrowLeft, ChevronRight, LogOut } from "lucide-react";
+import {
+  Dumbbell,
+  Flame,
+  Calendar,
+  ArrowLeft,
+  ChevronRight,
+  LogOut,
+} from "lucide-react";
 import { treino, dias } from "@/data/treino";
 import { useTreinoStorage } from "@/hooks/useTreinoStorage";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,12 +16,21 @@ import { ExerciseCard } from "@/components/ExerciseCard";
 import { ExerciseDetail } from "@/components/ExerciseDetail";
 import { Button } from "@/components/ui/button";
 import type { Exercicio } from "@/data/treino";
+import { gerarTreinoComId, ExercicioInstanciado } from "@/data/treino";
 
 const Index = () => {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [exercicioSelecionado, setExercicioSelecionado] = useState<Exercicio | null>(null);
-  
-  const { salvarRegistro, getRegistrosPorExercicio, getUltimoPeso, loading, reloadRegistros, registros } = useTreinoStorage();
+  const [exercicioSelecionado, setExercicioSelecionado] =
+    useState<ExercicioInstanciado | null>(null);
+
+  const {
+    salvarRegistro,
+    getRegistrosPorExercicio,
+    getUltimoPeso,
+    loading,
+    reloadRegistros,
+    registros,
+  } = useTreinoStorage();
   const { logout, user } = useAuth();
 
   const handleLogout = async () => {
@@ -25,8 +41,9 @@ const Index = () => {
     }
   };
 
-  const exerciciosDoDia = useMemo(() => {
-    return selectedDay ? treino.filter((t) => t.dia === selectedDay) : [];
+  const exerciciosDoDia = useMemo<ExercicioInstanciado[]>(() => {
+    if (!selectedDay) return [];
+    return gerarTreinoComId(selectedDay);
   }, [selectedDay]);
 
   const gruposUnicos = useMemo(() => {
@@ -35,19 +52,20 @@ const Index = () => {
   }, [exerciciosDoDia]);
 
   // Verifica se um exercício foi totalmente concluído hoje
-  const isExercicioConcluidoHoje = (exercicioNome: string, totalSeries: number) => {
-    const hoje = new Date();
-    const hojeStr = hoje.getFullYear() + '-' + (hoje.getMonth() + 1) + '-' + hoje.getDate();
-    
-    const registrosHoje = registros.filter(r => {
-      const dataRegistro = new Date(r.data);
-      const dataStr = dataRegistro.getFullYear() + '-' + (dataRegistro.getMonth() + 1) + '-' + dataRegistro.getDate();
-      return dataStr === hojeStr && r.exercicio === exercicioNome && r.concluida;
-    });
+  const isExercicioConcluidoHoje = (
+    exercicioId: string,
+    totalSeries: number,
+  ) => {
+    const hoje = new Date().toDateString();
 
-    // Conta séries únicas concluídas hoje
-    const seriesConcluidas = new Set(registrosHoje.map(r => r.serie)).size;
-    
+    const registrosHoje = registros.filter(
+      (r) =>
+        new Date(r.data).toDateString() === hoje &&
+        r.exercicioId === exercicioId &&
+        r.userId === user?.uid,
+    );
+
+    const seriesConcluidas = new Set(registrosHoje.map((r) => r.serie)).size;
     return seriesConcluidas >= totalSeries;
   };
 
@@ -79,7 +97,9 @@ const Index = () => {
                   </div>
                   <div>
                     <h1 className="text-2xl font-bold">Diário de Academia</h1>
-                    <p className="text-muted-foreground text-sm">Selecione o dia do treino</p>
+                    <p className="text-muted-foreground text-sm">
+                      Selecione o dia do treino
+                    </p>
                   </div>
                 </div>
                 <Button
@@ -95,7 +115,9 @@ const Index = () => {
             </div>
             <div className="space-y-3">
               {dias.map((dia, index) => {
-                const numExercicios = treino.filter(t => t.dia === dia).length;
+                const numExercicios = treino.filter(
+                  (t) => t.dia === dia,
+                ).length;
                 return (
                   <motion.div
                     key={dia}
@@ -114,7 +136,9 @@ const Index = () => {
                           <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
                             {dia}
                           </h3>
-                          <p className="text-sm text-muted-foreground">{numExercicios} exercícios</p>
+                          <p className="text-sm text-muted-foreground">
+                            {numExercicios} exercícios
+                          </p>
                         </div>
                       </div>
                       <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
@@ -163,7 +187,10 @@ const Index = () => {
           {/* Header */}
           <div className="pt-4 pb-2">
             <div className="flex items-center gap-3 mb-2">
-              <button onClick={() => setSelectedDay(null)} className="p-2 rounded-lg hover:bg-secondary/50">
+              <button
+                onClick={() => setSelectedDay(null)}
+                className="p-2 rounded-lg hover:bg-secondary/50"
+              >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-primary">
@@ -190,7 +217,9 @@ const Index = () => {
             >
               {gruposUnicos.map((grupo) => (
                 <div key={grupo}>
-                  <h2 className="text-lg font-semibold mb-3 gradient-text">{grupo}</h2>
+                  <h2 className="text-lg font-semibold mb-3 gradient-text">
+                    {grupo}
+                  </h2>
                   <div className="space-y-3">
                     {exerciciosDoDia
                       .filter((e) => e.grupo === grupo)
@@ -201,7 +230,10 @@ const Index = () => {
                           index={index}
                           ultimoPeso={getUltimoPeso(exercicio.exercicio)}
                           onClick={() => setExercicioSelecionado(exercicio)}
-                          isConcluido={isExercicioConcluidoHoje(exercicio.exercicio, exercicio.series)}
+                          isConcluido={isExercicioConcluidoHoje(
+                            exercicio.exercicio,
+                            "series" in exercicio ? exercicio.series : 1,
+                          )}
                         />
                       ))}
                   </div>
@@ -212,7 +244,7 @@ const Index = () => {
         </motion.div>
       </div>
       <footer className="mt-8 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
-        © 2026 Iron Buddy. Todos os direitos reservados.
+        © 2026 Paulo Dias - Red. Todos os direitos reservados.
       </footer>
     </>
   );

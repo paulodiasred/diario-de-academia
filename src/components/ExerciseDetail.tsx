@@ -9,7 +9,11 @@ import {
   History,
   Check,
 } from "lucide-react";
-import { Exercicio, grupoIcons, TreinoRegistro } from "@/data/treino";
+import {
+  ExercicioInstanciado,
+  grupoIcons,
+  TreinoRegistro,
+} from "@/data/treino";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { SeriesTracker } from "./SeriesTracker";
@@ -21,16 +25,16 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 /* 🔑 FUNÇÕES DE CONFIRMAÇÃO DE TIPO */
-function isCardio(ex: Exercicio) {
+function isCardio(ex: ExercicioInstanciado) {
   return ex.tipo === "Cardio";
 }
 
-function hasSeries(ex: Exercicio) {
+function hasSeries(ex: ExercicioInstanciado) {
   return ex.tipo === "Força" || ex.tipo === "Circuito";
 }
 
 interface ExerciseDetailProps {
-  exercicio: Exercicio;
+  exercicio: ExercicioInstanciado;
   registros: TreinoRegistro[];
   ultimoPeso: number | null;
   onVoltar: () => void;
@@ -53,9 +57,11 @@ export function ExerciseDetail({
   reloadRegistros,
 }: ExerciseDetailProps) {
   const [peso, setPeso] = useState(ultimoPeso?.toString() || "");
+  const totalSeries = exercicio.series ?? 1;
+
   const [seriesFeitas, setSeriesFeitas] = useState<boolean[]>(() => {
     if (!hasSeries(exercicio)) return [];
-    return new Array(exercicio.series).fill(false);
+    return new Array(totalSeries).fill(false);
   });
 
   const [cardioConcluido, setCardioConcluido] = useState(false);
@@ -104,7 +110,7 @@ export function ExerciseDetail({
   }, [registros]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (timerAtivo && tempoRestante > 0) {
       interval = setInterval(() => {
         setTempoRestante((t) => {
@@ -131,24 +137,22 @@ export function ExerciseDetail({
     const hojeStr =
       hoje.getFullYear() + "-" + (hoje.getMonth() + 1) + "-" + hoje.getDate();
     const registrosHoje = registros.filter((r) => {
-      const dataRegistro = new Date(r.data);
-      const dataStr =
-        dataRegistro.getFullYear() +
-        "-" +
-        (dataRegistro.getMonth() + 1) +
-        "-" +
-        dataRegistro.getDate();
-      return dataStr === hojeStr && r.concluida;
+      return (
+        new Date(r.data).toDateString() === new Date().toDateString() &&
+        r.exercicio === exercicio.exercicio &&
+        r.dia === exercicio.dia &&
+        r.concluida === true
+      );
     });
 
-    const novasSeries = new Array(exercicio.series).fill(false);
+    const novasSeries = new Array(totalSeries).fill(false);
     registrosHoje.forEach((r) => {
-      if (r.serie >= 1 && r.serie <= exercicio.series) {
+      if (r.serie >= 1 && r.serie <= totalSeries) {
         novasSeries[r.serie - 1] = true;
       }
     });
     setSeriesFeitas(novasSeries);
-  }, [registros, exercicio]);
+  }, [registros, exercicio, totalSeries]);
 
   const isExercicioConcluidoHoje =
     exercicio.tipo === "Cardio"
@@ -271,7 +275,7 @@ export function ExerciseDetail({
           <h3 className="font-semibold mb-2">Circuito</h3>
 
           <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-            {exercicio.circuito.map((item, index) => (
+            {exercicio.circuito?.map((item, index) => (
               <li key={index}>{item}</li>
             ))}
           </ul>

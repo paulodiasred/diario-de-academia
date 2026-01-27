@@ -6,6 +6,7 @@ export interface ExercicioBase {
   exercicio: string;
   tipo: TipoExercicio;
 }
+
 interface ExercicioForca extends ExercicioBase {
   descanso: number; // em segundos
   series: number;
@@ -35,6 +36,36 @@ export interface TreinoRegistro {
 }
 
 export type Exercicio = ExercicioForca | ExercicioCircuito | ExercicioCardio;
+
+export interface ExercicioInstanciado {
+  id: string;
+  dia: string;
+  grupo: string;
+  exercicio: string;
+  tipo: "Força" | "Circuito" | "Cardio";
+
+  // opcionais
+  descanso?: number;
+  series?: number;
+  circuito?: string[];
+}
+
+
+// =======================
+// REGISTRO FIREBASE
+// =======================
+
+export interface TreinoRegistro {
+  id?: string;
+  userId: string;
+  exercicioId: string; // 🔥 ESSENCIAL
+  exercicioNome: string;
+  peso: number;
+  serie: number;
+  dia: string;
+  data: string;
+  concluida?: boolean;
+}
 
 export const treino: Exercicio[] = [
   // SEGUNDA
@@ -360,4 +391,26 @@ export const grupoIcons: Record<string, string> = {
   Perna: "🦵",
   Ombro: "🎯",
   Cardio: "❤️",
+};
+
+
+// =======================
+// 🔥 GERADOR DE TREINO COM ID POR DIA
+// =======================
+
+export const gerarTreinoComId = (dia: string): ExercicioInstanciado[] => {
+  const hoje = new Date().toISOString().split("T")[0];
+
+  return treino
+    .filter(e => e.dia === dia)
+    .map(e => ({
+      id: `${e.exercicio}-${dia}-${hoje}`,
+      dia: e.dia,
+      grupo: e.grupo,
+      exercicio: e.exercicio,
+      tipo: e.tipo,
+      descanso: "descanso" in e ? e.descanso : undefined,
+      series: "series" in e ? e.series : undefined,
+      circuito: "circuito" in e ? e.circuito : undefined,
+    }));
 };
