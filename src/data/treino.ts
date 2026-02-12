@@ -68,79 +68,75 @@ export interface TreinoRegistro {
 }
 
 export const treino: Exercicio[] = [
-  // SEGUNDA
+  // ==================
+  // SEGUNDA — Peito FORÇA + Tríceps + Cardio
+  // ==================
+  {
+    dia: "Segunda",
+    grupo: "Peito pesado",
+    exercicio: "Supino barra",
+    tipo: "Força",
+    descanso: 120,
+    series: 4,
+  },
   {
     dia: "Segunda",
     grupo: "Peito pesado",
     exercicio: "Supino inclinado halteres",
     tipo: "Força",
-    descanso: 75,
+    descanso: 90,
     series: 4,
   },
   {
     dia: "Segunda",
     grupo: "Peito pesado",
-    exercicio: "Supino reto halteres",
-    tipo: "Força",
-    descanso: 75,
-    series: 4,
-  },
-  {
-    dia: "Segunda",
-    grupo: "Peito pesado",
-    exercicio: "Crucifixo",
-    tipo: "Força",
-    descanso: 50,
-    series: 5,
-  },
-  {
-    dia: "Segunda",
-    grupo: "Peito pesado",
-    exercicio: "Pullover",
+    exercicio: "Crossover baixo",
     tipo: "Força",
     descanso: 60,
-    series: 4,
+    series: 3,
   },
   {
     dia: "Segunda",
     grupo: "Peito pesado",
-    exercicio: "Crossover inclinação baixa",
+    exercicio: "Crucifixo (pausa 2s no centro)",
     tipo: "Força",
-    descanso: 45,
-    series: 4,
+    descanso: 60,
+    series: 3,
   },
   {
     dia: "Segunda",
     grupo: "Tríceps",
     exercicio: "Polia reta",
     tipo: "Força",
-    descanso: 50,
-    series: 4,
+    descanso: 60,
+    series: 3,
   },
   {
     dia: "Segunda",
     grupo: "Tríceps",
     exercicio: "Corda",
     tipo: "Força",
-    descanso: 45,
-    series: 4,
+    descanso: 60,
+    series: 3,
   },
   {
     dia: "Segunda",
-    grupo: "Tríceps",
-    exercicio: "Testa com corda",
+    grupo: "Peito pesado",
+    exercicio: "Flexão (finalizador: até falha + segurar embaixo 10s)",
     tipo: "Força",
-    descanso: 45,
-    series: 4,
+    descanso: 0,
+    series: 1,
   },
   {
     dia: "Segunda",
     grupo: "Cardio",
-    exercicio: "Cardio (25–30 min)",
+    exercicio: "Caminhada inclinada (20 min)",
     tipo: "Cardio",
   },
 
-  // TERÇA
+  // ==================
+  // TERÇA — Costas + Bíceps + Cardio
+  // ==================
   {
     dia: "Terça",
     grupo: "Costas",
@@ -152,15 +148,7 @@ export const treino: Exercicio[] = [
   {
     dia: "Terça",
     grupo: "Costas",
-    exercicio: "Pulley triângulo",
-    tipo: "Força",
-    descanso: 70,
-    series: 4,
-  },
-  {
-    dia: "Terça",
-    grupo: "Costas",
-    exercicio: "Remada unilateral",
+    exercicio: "Remada baixa",
     tipo: "Força",
     descanso: 75,
     series: 4,
@@ -168,10 +156,18 @@ export const treino: Exercicio[] = [
   {
     dia: "Terça",
     grupo: "Costas",
-    exercicio: "Remada baixa",
+    exercicio: "Pulley triângulo",
     tipo: "Força",
     descanso: 70,
-    series: 4,
+    series: 3,
+  },
+  {
+    dia: "Terça",
+    grupo: "Costas",
+    exercicio: "Crucifixo invertido",
+    tipo: "Força",
+    descanso: 45,
+    series: 3,
   },
   {
     dia: "Terça",
@@ -179,15 +175,7 @@ export const treino: Exercicio[] = [
     exercicio: "Encolhimento halteres",
     tipo: "Força",
     descanso: 60,
-    series: 4,
-  },
-  {
-    dia: "Terça",
-    grupo: "Costas",
-    exercicio: "Crucifixo invertido polia",
-    tipo: "Força",
-    descanso: 45,
-    series: 6,
+    series: 3,
   },
   {
     dia: "Terça",
@@ -203,7 +191,7 @@ export const treino: Exercicio[] = [
     exercicio: "Alternado",
     tipo: "Força",
     descanso: 50,
-    series: 4,
+    series: 3,
   },
   {
     dia: "Terça",
@@ -211,16 +199,18 @@ export const treino: Exercicio[] = [
     exercicio: "Martelo",
     tipo: "Força",
     descanso: 50,
-    series: 4,
+    series: 3,
   },
   {
     dia: "Terça",
     grupo: "Cardio",
-    exercicio: "Cardio (25–30 min)",
+    exercicio: "Caminhada inclinada (20 min)",
     tipo: "Cardio",
   },
 
-  // QUARTA
+  // ==================
+  // QUARTA — Perna (+ cardio opcional)
+  // ==================
   {
     dia: "Quarta",
     grupo: "Perna",
@@ -229,20 +219,12 @@ export const treino: Exercicio[] = [
     descanso: 90,
     series: 4,
   },
-  {
+    {
     dia: "Quarta",
     grupo: "Perna",
-    exercicio: "Cadeira extensora",
+    exercicio: "Stiff",
     tipo: "Força",
     descanso: 75,
-    series: 4,
-  },
-  {
-    dia: "Quarta",
-    grupo: "Perna",
-    exercicio: "Mesa flexora",
-    tipo: "Força",
-    descanso: 60,
     series: 4,
   },
   {
@@ -256,15 +238,23 @@ export const treino: Exercicio[] = [
   {
     dia: "Quarta",
     grupo: "Perna",
-    exercicio: "Abdutores",
+    exercicio: "Cadeira flexora",
     tipo: "Força",
-    descanso: 45,
+    descanso: 60,
     series: 3,
   },
   {
     dia: "Quarta",
     grupo: "Perna",
-    exercicio: "Adutores",
+    exercicio: "Cadeira extensora",
+    tipo: "Força",
+    descanso: 75,
+    series: 3,
+  },
+  {
+    dia: "Quarta",
+    grupo: "Perna",
+    exercicio: "Abdutor",
     tipo: "Força",
     descanso: 45,
     series: 3,
@@ -277,15 +267,23 @@ export const treino: Exercicio[] = [
     descanso: 35,
     series: 4,
   },
+  {
+    dia: "Quarta",
+    grupo: "Cardio",
+    exercicio: "Caminhada inclinada (15–20 min) — opcional",
+    tipo: "Cardio",
+  },
 
-  // QUINTA
+  // ==================
+  // QUINTA — Ombro + Core + Cardio
+  // ==================
   {
     dia: "Quinta",
     grupo: "Ombro",
     exercicio: "Aquecimento em circuito",
     tipo: "Circuito",
     descanso: 40,
-    series: 4,
+    series: 3,
     circuito: [
       "Elevação lateral",
       "Elevação frontal",
@@ -311,9 +309,9 @@ export const treino: Exercicio[] = [
   {
     dia: "Quinta",
     grupo: "Ombro",
-    exercicio: "Elevação frontal",
+    exercicio: "Peck deck invertido",
     tipo: "Força",
-    descanso: 45,
+    descanso: 50,
     series: 3,
   },
   {
@@ -322,31 +320,41 @@ export const treino: Exercicio[] = [
     exercicio: "Crucifixo invertido banco",
     tipo: "Força",
     descanso: 50,
-    series: 4,
+    series: 3,
   },
   {
     dia: "Quinta",
-    grupo: "Ombro",
-    exercicio: "Peck deck invertido",
+    grupo: "Core",
+    exercicio: "Prancha",
     tipo: "Força",
-    descanso: 50,
-    series: 4,
+    descanso: 60,
+    series: 3,
+  },
+  {
+    dia: "Quinta",
+    grupo: "Core",
+    exercicio: "Abdominal infra",
+    tipo: "Força",
+    descanso: 60,
+    series: 3,
   },
   {
     dia: "Quinta",
     grupo: "Cardio",
-    exercicio: "Cardio (25–30 min)",
+    exercicio: "Caminhada inclinada (20 min)",
     tipo: "Cardio",
   },
 
-  // SEXTA
+  // ==================
+  // SEXTA — Peito VOLUME + Cardio
+  // ==================
   {
     dia: "Sexta",
     grupo: "Peito isolado",
-    exercicio: "Crossover",
+    exercicio: "Supino reto",
     tipo: "Força",
-    descanso: 40,
-    series: 4,
+    descanso: 60,
+    series: 3,
   },
   {
     dia: "Sexta",
@@ -359,9 +367,9 @@ export const treino: Exercicio[] = [
   {
     dia: "Sexta",
     grupo: "Peito isolado",
-    exercicio: "Supino reto",
+    exercicio: "Crossover",
     tipo: "Força",
-    descanso: 60,
+    descanso: 40,
     series: 4,
   },
   {
@@ -370,12 +378,20 @@ export const treino: Exercicio[] = [
     exercicio: "Pullover",
     tipo: "Força",
     descanso: 50,
-    series: 4,
+    series: 3,
+  },
+  {
+    dia: "Sexta",
+    grupo: "Peito isolado",
+    exercicio: "Flexão lenta (finalizador: até falha)",
+    tipo: "Força",
+    descanso: 0,
+    series: 1,
   },
   {
     dia: "Sexta",
     grupo: "Cardio",
-    exercicio: "Cardio (25–30 min)",
+    exercicio: "Caminhada inclinada (20 min)",
     tipo: "Cardio",
   },
 ];
@@ -390,6 +406,7 @@ export const grupoIcons: Record<string, string> = {
   Bíceps: "💪",
   Perna: "🦵",
   Ombro: "🎯",
+  Core: "🧠",
   Cardio: "❤️",
 };
 
