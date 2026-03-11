@@ -1,73 +1,98 @@
-# Welcome to your Lovable project
+# Diario de Academia
 
-## Project info
+Aplicacao web para acompanhar treinos de musculacao e cardio, registrando series, carga e evolucao ao longo dos dias.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+O projeto foi iniciado no Lovable e evoluido para desenvolvimento local com React + TypeScript.
 
-## How can I edit this code?
+## Funcionalidades
 
-There are several ways of editing your application.
+- Autenticacao com Firebase (email/senha e Google)
+- Selecao de treino por dia da semana (Segunda a Sexta)
+- Registro de series por exercicio com controle de conclusao
+- Temporizador de descanso entre series
+- Marcacao de cardio concluido
+- Historico recente por exercicio com media de carga
+- Grafico de evolucao de progresso
+- Persistencia dos registros no Firestore por usuario
 
-**Use Lovable**
+## Stack do projeto
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- shadcn/ui + Radix UI
+- Framer Motion
+- Firebase (Auth + Firestore)
+- Vitest + Testing Library
 
-Changes made via Lovable will be committed automatically to this repo.
+## Como rodar localmente
 
-**Use your preferred IDE**
+### 1) Requisitos
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Node.js 18+ (recomendado 20+)
+- npm 9+
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 2) Instalacao
 
-Follow these steps:
+```bash
+git clone <URL_DO_REPOSITORIO>
+cd diario-de-academia
+npm install
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 3) Ambiente Firebase
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Atualmente as credenciais estao definidas em `src/lib/firebase.ts`.
 
-# Step 3: Install the necessary dependencies.
-npm i
+Se quiser usar seu proprio projeto Firebase:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+1. Crie um projeto no Firebase
+2. Ative Authentication (Email/Senha e Google, opcional)
+3. Crie um banco Firestore
+4. Substitua as chaves em `src/lib/firebase.ts`
+
+### 4) Executar
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Abra o endereco mostrado no terminal (normalmente `http://localhost:5173`).
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Scripts disponiveis
 
-**Use GitHub Codespaces**
+- `npm run dev`: inicia ambiente de desenvolvimento
+- `npm run build`: gera build de producao
+- `npm run build:dev`: gera build em modo development
+- `npm run preview`: sobe servidor para visualizar o build
+- `npm run lint`: executa ESLint
+- `npm run test`: executa testes uma vez
+- `npm run test:watch`: executa testes em modo observacao
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Estrutura principal
 
-## What technologies are used for this project?
+```txt
+src/
+  components/      # componentes de UI e fluxo de treino
+  contexts/        # contexto de autenticacao
+  data/            # definicao dos treinos e tipos
+  hooks/           # hooks de auth e persistencia
+  lib/             # integracoes (Firebase, utils)
+  pages/           # paginas principais
+```
 
-This project is built with:
+## Deploy
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+O projeto possui `public/_redirects`, facilitando deploy em plataformas estaticas com SPA (ex.: Netlify).
 
-## How can I deploy this project?
+Fluxo recomendado:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+1. `npm run build`
+2. Publicar o conteudo da pasta `dist`
 
-## Can I connect a custom domain to my Lovable project?
+## Proximos passos sugeridos
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- Mover configuracao Firebase para variaveis de ambiente (`.env`)
+- Adicionar mais testes de componentes e fluxo de treino
+- Criar dashboard com estatisticas semanais/mensais
