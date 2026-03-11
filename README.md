@@ -4,6 +4,25 @@ Aplicacao web para acompanhar treinos de musculacao e cardio, registrando series
 
 O projeto foi iniciado no Lovable e evoluido para desenvolvimento local com React + TypeScript.
 
+## Sobre o projeto
+
+Em 2026 eu cismei que queria emagrecer. Entrei na academia em 21 de janeiro e logo percebi que sempre me perdia no numero de series e, pior, esquecia o peso que tinha usado em cada aparelho.
+
+E claro... eu nao queria pagar por app nenhum pra isso kkkkk. Entao separei uma noite e fiz esse projetinho.
+
+Ele e simples e direto: meu treino ja estava montado, entao so organizei tudo no app. Hoje eu consigo marcar exatamente em qual serie estou, recuperar automaticamente o ultimo peso usado, consultar um historico rapido e usar um timer de descanso animado.
+
+Esta tudo responsivo (testado no meu Redmi Note 12 Pro) e cumpre exatamente o objetivo principal: me ajudar durante o treino sem complicacao.
+
+Nas proximas versoes, quero adicionar edicao de treino e criacao de treino do zero.
+
+## Screenshots
+
+![Tela de login](docs/images/login.jpg)
+![Visao da semana](docs/images/semana.jpg)
+![Treino selecionado](docs/images/treino-selecionado.jpg)
+![Treino em execucao com descanso](docs/images/treino-descanso-execucao.jpg)
+
 ## Funcionalidades
 
 - Autenticacao com Firebase (email/senha e Google)
