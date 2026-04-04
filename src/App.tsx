@@ -7,6 +7,9 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthForm } from "@/components/AuthForm";
 import Index from "./pages/Index";
+import MeusTreinos from "./pages/MeusTreinos";
+import CriarEditarTreino from "./pages/CriarEditarTreino";
+import TreinoPersonalizadoSession from "./pages/TreinoPersonalizadoSession";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +33,10 @@ function AppContent() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/meus-treinos" element={<MeusTreinos />} />
+        <Route path="/meus-treinos/criar" element={<CriarEditarTreino />} />
+        <Route path="/meus-treinos/editar/:id" element={<CriarEditarTreino />} />
+        <Route path="/meus-treinos/:id" element={<TreinoPersonalizadoSession />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dumbbell,
@@ -7,6 +8,7 @@ import {
   ArrowLeft,
   ChevronRight,
   LogOut,
+  ListChecks,
 } from "lucide-react";
 import { treino, dias } from "@/data/treino";
 import { useTreinoStorage } from "@/hooks/useTreinoStorage";
@@ -19,6 +21,7 @@ import type { Exercicio } from "@/data/treino";
 import { gerarTreinoComId, ExercicioInstanciado } from "@/data/treino";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [exercicioSelecionado, setExercicioSelecionado] =
     useState<ExercicioInstanciado | null>(null);
@@ -114,6 +117,37 @@ const Index = () => {
               </div>
             </div>
             <div className="space-y-3">
+              {/* Botão Meus Treinos */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => navigate("/meus-treinos")}
+                className="glass-card rounded-2xl p-4 cursor-pointer hover:border-primary/40 transition-all group border-primary/20"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center text-xl">
+                      <ListChecks className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-primary group-hover:text-primary transition-colors">
+                        Meus Treinos
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Crie e gerencie seus treinos
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
+                </div>
+              </motion.div>
+
+              <div className="flex items-center gap-3 py-1">
+                <div className="flex-1 h-px bg-border/50" />
+                <span className="text-xs text-muted-foreground">Treino da semana</span>
+                <div className="flex-1 h-px bg-border/50" />
+              </div>
+
               {dias.map((dia, index) => {
                 const numExercicios = treino.filter(
                   (t) => t.dia === dia,

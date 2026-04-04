@@ -48,6 +48,7 @@ export interface ExercicioInstanciado {
   descanso?: number;
   series?: number;
   circuito?: string[];
+  images?: string[];
 }
 
 

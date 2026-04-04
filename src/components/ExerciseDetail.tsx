@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -68,10 +68,14 @@ export function ExerciseDetail({
   const [tempoRestante, setTempoRestante] = useState(0);
   const [timerAtivo, setTimerAtivo] = useState(false);
 
+  // Guarda o timestamp exato em que o timer deve acabar
+  const endTimeRef = useRef<number | null>(null);
+
   const icon = grupoIcons[exercicio.grupo] || "🏋️";
+
   const iniciarDescanso = useCallback(() => {
     if (!hasSeries(exercicio)) return;
-
+    endTimeRef.current = Date.now() + exercicio.descanso * 1000;
     setTempoRestante(exercicio.descanso);
     setTimerAtivo(true);
   }, [exercicio]);
@@ -110,21 +114,36 @@ export function ExerciseDetail({
   }, [registros]);
 
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (timerAtivo && tempoRestante > 0) {
-      interval = setInterval(() => {
-        setTempoRestante((t) => {
-          if (t <= 1) {
-            setTimerAtivo(false);
-            toast.success("Descanso finalizado! 💪");
-            return 0;
-          }
-          return t - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [timerAtivo, tempoRestante]);
+    if (!timerAtivo || !endTimeRef.current) return;
+
+    const tick = () => {
+      const restante = Math.round((endTimeRef.current! - Date.now()) / 1000);
+      if (restante <= 0) {
+        setTempoRestante(0);
+        setTimerAtivo(false);
+        endTimeRef.current = null;
+        toast.success("Descanso finalizado! 💪");
+        return;
+      }
+      setTempoRestante(restante);
+    };
+
+    tick(); // atualiza imediatamente ao iniciar
+
+    // Intervalo curto para precisão melhor
+    const interval = setInterval(tick, 500);
+
+    // Quando o usuário volta pra aba, sincroniza na hora
+    const onVisibilityChange = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [timerAtivo]);
 
   // Inicializar séries baseadas em registros existentes
   useEffect(() => {
@@ -170,16 +189,19 @@ export function ExerciseDetail({
   }, [isExercicioConcluidoHoje, onVoltar]);
 
   const pausarTimer = () => {
+    // Guarda quanto restava para poder retomar
+    endTimeRef.current = null;
     setTimerAtivo(false);
   };
 
   const resetarTimer = () => {
-    if (!hasSeries(exercicio)) {
-      setSeriesFeitas([]);
-      return;
-    }
-    setTempoRestante(exercicio.descanso);
+    endTimeRef.current = null;
     setTimerAtivo(false);
+    if (hasSeries(exercicio)) {
+      setTempoRestante(exercicio.descanso ?? 0);
+    } else {
+      setSeriesFeitas([]);
+    }
   };
 
   const concluirSerie = async (serie: number, desmarcar = false) => {
@@ -269,6 +291,24 @@ export function ExerciseDetail({
           {icon}
         </div>
       </div>
+
+      {/* Imagens do exercício */}
+      {exercicio.images && exercicio.images.length > 0 && (
+        <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+          {exercicio.images.map((img, i) => (
+            <img
+              key={i}
+              src={`/exercises-img/${img}`}
+              alt={`${exercicio.exercicio} passo ${i + 1}`}
+              className="h-36 w-auto rounded-2xl object-cover shrink-0 bg-secondary/40"
+              loading="lazy"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {exercicio.tipo === "Circuito" && (
         <div className="glass-card rounded-2xl p-4">
