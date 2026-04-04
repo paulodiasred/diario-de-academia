@@ -7,9 +7,8 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Retorna a URL pública de uma imagem do catálogo de exercícios.
- * Usa o CDN jsDelivr espelhando o repo original free-exercise-db,
- * evitando armazenar ~94MB de imagens no próprio repositório.
+ * As imagens ficam em public/exercises-img/ e são servidas estaticamente.
  */
 export function getExerciseImageUrl(imagePath: string): string {
-  return `https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises/${imagePath}`;
+  return `/exercises-img/${imagePath}`;
 }

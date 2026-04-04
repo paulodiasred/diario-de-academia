@@ -22,7 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-# Imagens dos exercícios (servidas via CDN em produção — não versionar)
-public/exercises-img/
-src/exercises/exercises-img/
