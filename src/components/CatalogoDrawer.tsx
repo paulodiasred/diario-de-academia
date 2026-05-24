@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search, X, Plus, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { getExerciseImageUrl } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,
@@ -264,7 +265,7 @@ export function CatalogoDrawer({
                       <div className="w-14 h-14 rounded-xl overflow-hidden bg-secondary/50 shrink-0">
                         {ex.images && ex.images[0] ? (
                           <img
-                            src={`/exercises-img/${ex.images[0]}`}
+                            src={getExerciseImageUrl(ex.images[0])}
                             alt={ex.name}
                             className="w-full h-full object-cover"
                             loading="lazy"
@@ -340,8 +341,8 @@ export function CatalogoDrawer({
                                 {ex.images.map((img, i) => (
                                   <img
                                     key={i}
-                                    src={`/exercises-img/${img}`}
-                                    alt={`${ex.name} ${i + 1}`}
+                                  src={getExerciseImageUrl(img)}
+                                  alt={`${ex.name} ${i + 1}`}
                                     className="w-28 h-20 object-cover rounded-xl bg-secondary/50"
                                     loading="lazy"
                                     onError={(e) => {

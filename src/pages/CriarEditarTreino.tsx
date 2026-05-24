@@ -18,6 +18,7 @@ import { CatalogoDrawer } from "@/components/CatalogoDrawer";
 import { useMeusTreinos } from "@/hooks/useMeusTreinos";
 import type { ExercicioCatalogo, ExercicioNoTreino } from "@/types/catalogo";
 import { MUSCULO_LABEL, CATEGORIA_LABEL, DIAS_SEMANA } from "@/types/catalogo";
+import { getExerciseImageUrl } from "@/lib/utils";
 import { toast } from "sonner";
 
 const CriarEditarTreino = () => {
@@ -264,7 +265,7 @@ const CriarEditarTreino = () => {
                         {ex.images && ex.images[0] && (
                           <div className="w-10 h-10 rounded-lg overflow-hidden bg-secondary/50 shrink-0 mt-0.5">
                             <img
-                              src={`/exercises-img/${ex.images[0]}`}
+                              src={getExerciseImageUrl(ex.images[0])}
                               alt={ex.exercicioNome}
                               className="w-full h-full object-cover"
                               loading="lazy"

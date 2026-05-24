@@ -70,7 +70,7 @@ export interface TreinoRegistro {
 
 export const treino: Exercicio[] = [
   // ==================
-  // SEGUNDA — Peito FORÇA + Tríceps + Cardio
+  // SEGUNDA — Peito FORÇA + Tríceps
   // ==================
   {
     dia: "Segunda",
@@ -123,20 +123,15 @@ export const treino: Exercicio[] = [
   {
     dia: "Segunda",
     grupo: "Peito pesado",
-    exercicio: "Flexão (finalizador: até falha + segurar embaixo 10s)",
+    exercicio: "Flexão (até falha + segurar 10s)",
     tipo: "Força",
     descanso: 0,
     series: 1,
   },
-  {
-    dia: "Segunda",
-    grupo: "Cardio",
-    exercicio: "Caminhada inclinada (20 min)",
-    tipo: "Cardio",
-  },
 
   // ==================
-  // TERÇA — Costas + Bíceps + Cardio
+  // TERÇA — Costas + Bíceps
+  // OTIMIZADO PRA 1H
   // ==================
   {
     dia: "Terça",
@@ -153,14 +148,6 @@ export const treino: Exercicio[] = [
     tipo: "Força",
     descanso: 75,
     series: 4,
-  },
-  {
-    dia: "Terça",
-    grupo: "Costas",
-    exercicio: "Pulley triângulo",
-    tipo: "Força",
-    descanso: 70,
-    series: 3,
   },
   {
     dia: "Terça",
@@ -189,28 +176,15 @@ export const treino: Exercicio[] = [
   {
     dia: "Terça",
     grupo: "Bíceps",
-    exercicio: "Alternado",
-    tipo: "Força",
-    descanso: 50,
-    series: 3,
-  },
-  {
-    dia: "Terça",
-    grupo: "Bíceps",
     exercicio: "Martelo",
     tipo: "Força",
     descanso: 50,
     series: 3,
   },
-  {
-    dia: "Terça",
-    grupo: "Cardio",
-    exercicio: "Caminhada inclinada (20 min)",
-    tipo: "Cardio",
-  },
 
   // ==================
-  // QUARTA — Perna (+ cardio opcional)
+  // QUARTA — PERNA
+  // MAIS EFICIENTE
   // ==================
   {
     dia: "Quarta",
@@ -220,18 +194,10 @@ export const treino: Exercicio[] = [
     descanso: 90,
     series: 4,
   },
-    {
-    dia: "Quarta",
-    grupo: "Perna",
-    exercicio: "Stiff",
-    tipo: "Força",
-    descanso: 75,
-    series: 4,
-  },
   {
     dia: "Quarta",
     grupo: "Perna",
-    exercicio: "Agachamento sumô",
+    exercicio: "Stiff",
     tipo: "Força",
     descanso: 75,
     series: 4,
@@ -255,28 +221,14 @@ export const treino: Exercicio[] = [
   {
     dia: "Quarta",
     grupo: "Perna",
-    exercicio: "Abdutor",
-    tipo: "Força",
-    descanso: 45,
-    series: 3,
-  },
-  {
-    dia: "Quarta",
-    grupo: "Perna",
     exercicio: "Panturrilha",
     tipo: "Força",
     descanso: 35,
     series: 4,
   },
-  {
-    dia: "Quarta",
-    grupo: "Cardio",
-    exercicio: "Caminhada inclinada (15–20 min) — opcional",
-    tipo: "Cardio",
-  },
 
   // ==================
-  // QUINTA — Ombro + Core + Cardio
+  // QUINTA — Ombro + Core
   // ==================
   {
     dia: "Quinta",
@@ -317,14 +269,6 @@ export const treino: Exercicio[] = [
   },
   {
     dia: "Quinta",
-    grupo: "Ombro",
-    exercicio: "Crucifixo invertido banco",
-    tipo: "Força",
-    descanso: 50,
-    series: 3,
-  },
-  {
-    dia: "Quinta",
     grupo: "Core",
     exercicio: "Prancha",
     tipo: "Força",
@@ -339,15 +283,10 @@ export const treino: Exercicio[] = [
     descanso: 60,
     series: 3,
   },
-  {
-    dia: "Quinta",
-    grupo: "Cardio",
-    exercicio: "Caminhada inclinada (20 min)",
-    tipo: "Cardio",
-  },
 
   // ==================
-  // SEXTA — Peito VOLUME + Cardio
+  // SEXTA — Peito VOLUME
+  // MAIS LIMPO
   // ==================
   {
     dia: "Sexta",
@@ -376,24 +315,10 @@ export const treino: Exercicio[] = [
   {
     dia: "Sexta",
     grupo: "Peito isolado",
-    exercicio: "Pullover",
-    tipo: "Força",
-    descanso: 50,
-    series: 3,
-  },
-  {
-    dia: "Sexta",
-    grupo: "Peito isolado",
-    exercicio: "Flexão lenta (finalizador: até falha)",
+    exercicio: "Flexão lenta (até falha)",
     tipo: "Força",
     descanso: 0,
     series: 1,
-  },
-  {
-    dia: "Sexta",
-    grupo: "Cardio",
-    exercicio: "Caminhada inclinada (20 min)",
-    tipo: "Cardio",
   },
 ];
 

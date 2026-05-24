@@ -16,6 +16,7 @@ import {
 } from "@/data/treino";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getExerciseImageUrl } from "@/lib/utils";
 import { SeriesTracker } from "./SeriesTracker";
 import { CardioTracker } from "./CardioTracker";
 import { ProgressChart } from "./ProgressChart";
@@ -298,7 +299,7 @@ export function ExerciseDetail({
           {exercicio.images.map((img, i) => (
             <img
               key={i}
-              src={`/exercises-img/${img}`}
+              src={getExerciseImageUrl(img)}
               alt={`${exercicio.exercicio} passo ${i + 1}`}
               className="h-36 w-auto rounded-2xl object-cover shrink-0 bg-secondary/40"
               loading="lazy"
