@@ -123,10 +123,10 @@ export const treino: Exercicio[] = [
   {
     dia: "Segunda",
     grupo: "Peito pesado",
-    exercicio: "Flexão (até falha + segurar 10s)",
+    exercicio: "Peck deck",
     tipo: "Força",
-    descanso: 0,
-    series: 1,
+    descanso: 45,
+    series: 2,
   },
 
   // ==================
@@ -315,12 +315,12 @@ export const treino: Exercicio[] = [
   {
     dia: "Sexta",
     grupo: "Peito isolado",
-    exercicio: "Flexão lenta (até falha)",
+    exercicio: "Chest press máquina",
     tipo: "Força",
-    descanso: 0,
-    series: 1,
+    descanso: 45,
+    series: 3,
   },
-];
+]; 
 
 export const dias = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"] as const;
 
