@@ -10,7 +10,7 @@ import {
   LogOut,
   ListChecks,
 } from "lucide-react";
-import { treino, dias } from "@/data/treino";
+import { treino, dias, grupoIcons } from "@/data/treino";
 import { useTreinoStorage } from "@/hooks/useTreinoStorage";
 import { useAuth } from "@/hooks/useAuth";
 import { DaySelector } from "@/components/DaySelector";
@@ -72,6 +72,39 @@ const Index = () => {
     return seriesConcluidas >= totalSeries;
   };
 
+  const dayNameMap: Record<number, string> = {
+    1: "Segunda",
+    2: "Terça",
+    3: "Quarta",
+    4: "Quinta",
+    5: "Sexta",
+  };
+  const todayName = dayNameMap[new Date().getDay()] ?? null;
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+  const firstName =
+    user?.displayName?.split(" ")[0] ??
+    user?.email?.split("@")[0] ??
+    "atleta";
+
+  const diaIcone = (dia: string) => {
+    const firstExercise = treino.find((e) => e.dia === dia);
+    return firstExercise ? (grupoIcons[firstExercise.grupo] ?? "📅") : "📅";
+  };
+
+  const getDayProgress = (dia: string) => {
+    const exerciciosDia = treino.filter((e) => e.dia === dia);
+    const total = exerciciosDia.length;
+    const hoje = new Date().toISOString().split("T")[0];
+    const concluidos = exerciciosDia.filter((e) => {
+      const id = `${e.exercicio}-${dia}-${hoje}`;
+      const series = "series" in e ? e.series : 1;
+      return isExercicioConcluidoHoje(id, series);
+    }).length;
+    return { total, concluidos };
+  };
+
   if (!selectedDay) {
     if (loading) {
       return (
@@ -86,7 +119,7 @@ const Index = () => {
 
     return (
       <>
-        <div className="p-4 max-w-md mx-auto">
+        <div className="p-4 pb-24 max-w-md mx-auto">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -95,11 +128,13 @@ const Index = () => {
             <div className="pt-4 pb-2">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-primary">
-                    <Dumbbell className="w-6 h-6 text-primary-foreground" />
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-primary text-xl font-bold text-primary-foreground">
+                    {firstName[0]?.toUpperCase()}
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold">Diário de Academia</h1>
+                    <h1 className="text-2xl font-bold">
+                      {greeting}, {firstName}!
+                    </h1>
                     <p className="text-muted-foreground text-sm">
                       Selecione o dia do treino
                     </p>
@@ -149,9 +184,10 @@ const Index = () => {
               </div>
 
               {dias.map((dia, index) => {
-                const numExercicios = treino.filter(
-                  (t) => t.dia === dia,
-                ).length;
+                const isToday = dia === todayName;
+                const { total, concluidos } = getDayProgress(dia);
+                const isComplete = total > 0 && concluidos >= total;
+                const icon = diaIcone(dia);
                 return (
                   <motion.div
                     key={dia}
@@ -159,23 +195,68 @@ const Index = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     onClick={() => setSelectedDay(dia)}
-                    className="glass-card rounded-2xl p-4 cursor-pointer hover:border-primary/30 transition-all group"
+                    className={`glass-card rounded-2xl p-4 cursor-pointer transition-all group ${
+                      isToday
+                        ? "border-primary/60"
+                        : "hover:border-primary/30"
+                    }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center text-xl">
-                          📅
+                        <div
+                          className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${
+                            isComplete
+                              ? "bg-success/20"
+                              : isToday
+                              ? "bg-primary/20"
+                              : "bg-secondary/50"
+                          }`}
+                        >
+                          {isComplete ? "✅" : icon}
                         </div>
                         <div>
-                          <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                            {dia}
-                          </h3>
+                          <div className="flex items-center gap-2">
+                            <h3
+                              className={`font-semibold transition-colors ${
+                                isToday
+                                  ? "text-primary"
+                                  : "text-foreground group-hover:text-primary"
+                              }`}
+                            >
+                              {dia}
+                            </h3>
+                            {isToday && (
+                              <span className="text-xs font-medium px-2 py-0.5 bg-primary/20 text-primary rounded-full">
+                                Hoje
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">
-                            {numExercicios} exercícios
+                            {concluidos > 0
+                              ? `${concluidos}/${total} concluídos`
+                              : `${total} exercícios`}
                           </p>
+                          {concluidos > 0 && (
+                            <div className="mt-1.5 h-1 w-28 bg-secondary/50 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  isComplete ? "bg-success" : "bg-primary"
+                                }`}
+                                style={{
+                                  width: `${(concluidos / total) * 100}%`,
+                                }}
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
+                      <ChevronRight
+                        className={`w-5 h-5 transition-colors ${
+                          isToday
+                            ? "text-primary"
+                            : "text-muted-foreground group-hover:text-primary"
+                        }`}
+                      />
                     </div>
                   </motion.div>
                 );
@@ -184,7 +265,7 @@ const Index = () => {
           </motion.div>
         </div>
         <footer className="mt-8 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
-          © 2026 Paulo Dias - Red. Todos os direitos reservados.
+          © 2026 Iron Buddy. Todos os direitos reservados.
         </footer>
       </>
     );
@@ -193,7 +274,7 @@ const Index = () => {
   if (exercicioSelecionado) {
     return (
       <>
-        <div className="min-h-screen p-4 max-w-md mx-auto">
+        <div className="min-h-screen p-4 pb-8 max-w-md mx-auto">
           <ExerciseDetail
             exercicio={exercicioSelecionado}
             registros={getRegistrosPorExercicio(exercicioSelecionado.exercicio)}
@@ -212,7 +293,7 @@ const Index = () => {
 
   return (
     <>
-      <div className="min-h-screen p-4 max-w-md mx-auto">
+      <div className="min-h-screen p-4 pb-24 max-w-md mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -278,7 +359,7 @@ const Index = () => {
         </motion.div>
       </div>
       <footer className="mt-8 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
-        © 2026 Paulo Dias - Red. Todos os direitos reservados.
+        © 2026 Iron Buddy. Todos os direitos reservados.
       </footer>
     </>
   );

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthForm } from "@/components/AuthForm";
+import { BottomNav } from "@/components/BottomNav";
 import Index from "./pages/Index";
 import MeusTreinos from "./pages/MeusTreinos";
 import CriarEditarTreino from "./pages/CriarEditarTreino";
@@ -40,6 +41,7 @@ function AppContent() {
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <BottomNav />
     </BrowserRouter>
   );
 }

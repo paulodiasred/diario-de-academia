@@ -54,7 +54,7 @@ const MeusTreinos = () => {
 
   return (
     <>
-      <div className="min-h-screen p-4 max-w-md mx-auto">
+      <div className="min-h-screen p-4 pb-24 max-w-md mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
