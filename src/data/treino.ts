@@ -1,3 +1,5 @@
+import { chaveDiaLocal } from "@/domain/datas";
+
 type TipoExercicio = "Força" | "Circuito" | "Cardio";
 
 export interface ExercicioBase {
@@ -24,6 +26,7 @@ interface ExercicioCardio extends ExercicioBase {
   tipo: "Cardio";
 }
 
+/** Documento da coleção `registros`: uma série registrada. */
 export interface TreinoRegistro {
   id?: string;
   userId: string;
@@ -51,22 +54,6 @@ export interface ExercicioInstanciado {
   images?: string[];
 }
 
-
-// =======================
-// REGISTRO FIREBASE
-// =======================
-
-export interface TreinoRegistro {
-  id?: string;
-  userId: string;
-  exercicioId: string; // 🔥 ESSENCIAL
-  exercicioNome: string;
-  peso: number;
-  serie: number;
-  dia: string;
-  data: string;
-  concluida?: boolean;
-}
 
 export const treino: Exercicio[] = [
   // ==================
@@ -342,7 +329,7 @@ export const grupoIcons: Record<string, string> = {
 // =======================
 
 export const gerarTreinoComId = (dia: string): ExercicioInstanciado[] => {
-  const hoje = new Date().toISOString().split("T")[0];
+  const hoje = chaveDiaLocal();
 
   return treino
     .filter(e => e.dia === dia)

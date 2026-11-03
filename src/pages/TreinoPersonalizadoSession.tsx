@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Dumbbell, Flame } from "lucide-react";
 import { useMeusTreinos } from "@/hooks/useMeusTreinos";
 import { useTreinoStorage } from "@/hooks/useTreinoStorage";
-import { useAuth } from "@/hooks/useAuth";
+import { chaveDiaLocal } from "@/domain/datas";
+import { exercicioConcluidoHoje } from "@/domain/registros";
+import { ErrorState } from "@/components/ErrorState";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import { ExerciseDetail } from "@/components/ExerciseDetail";
 import type { ExercicioInstanciado } from "@/data/treino";
@@ -15,7 +17,7 @@ function toExercicioInstanciado(
   ex: ExercicioNoTreino,
   treinoId: string
 ): ExercicioInstanciado {
-  const hoje = new Date().toISOString().split("T")[0];
+  const hoje = chaveDiaLocal();
   return {
     id: `${ex.exercicioId}-${treinoId}-${hoje}`,
     dia: `treino-${treinoId}`,
@@ -35,15 +37,16 @@ function toExercicioInstanciado(
 const TreinoPersonalizadoSession = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { treinos, loading } = useMeusTreinos();
+  const { treinos, loading, erro, recarregar } = useMeusTreinos();
   const {
     salvarRegistro,
+    removerRegistro,
     getRegistrosPorExercicio,
     getUltimoPeso,
-    reloadRegistros,
     registros,
+    erro: erroRegistros,
+    recarregar: recarregarRegistros,
   } = useTreinoStorage();
-  const { user } = useAuth();
 
   const [exercicioSelecionado, setExercicioSelecionado] =
     useState<ExercicioInstanciado | null>(null);
@@ -61,20 +64,17 @@ const TreinoPersonalizadoSession = () => {
       .map((ex) => toExercicioInstanciado(ex, id));
   }, [treino, id]);
 
-  const isExercicioConcluidoHoje = (
-    exercicioInstancia: ExercicioInstanciado,
-    totalSeries: number
-  ) => {
-    const hoje = new Date().toDateString();
-    const registrosHoje = registros.filter(
-      (r) =>
-        new Date(r.data).toDateString() === hoje &&
-        r.exercicio === exercicioInstancia.exercicio &&
-        r.userId === user?.uid
+  if (erro || erroRegistros) {
+    return (
+      <ErrorState
+        mensagem="Não foi possível carregar este treino"
+        onTentarNovamente={() => {
+          void recarregar();
+          void recarregarRegistros();
+        }}
+      />
     );
-    const seriesConcluidas = new Set(registrosHoje.map((r) => r.serie)).size;
-    return seriesConcluidas >= totalSeries;
-  };
+  }
 
   if (loading) {
     return (
@@ -109,7 +109,7 @@ const TreinoPersonalizadoSession = () => {
           ultimoPeso={getUltimoPeso(exercicioSelecionado.exercicio)}
           onVoltar={() => setExercicioSelecionado(null)}
           onSalvarRegistro={salvarRegistro}
-          reloadRegistros={reloadRegistros}
+          onRemoverRegistro={removerRegistro}
         />
       </div>
     );
@@ -169,8 +169,9 @@ const TreinoPersonalizadoSession = () => {
                   index={index}
                   ultimoPeso={getUltimoPeso(exercicio.exercicio)}
                   onClick={() => setExercicioSelecionado(exercicio)}
-                  isConcluido={isExercicioConcluidoHoje(
-                    exercicio,
+                  isConcluido={exercicioConcluidoHoje(
+                    registros,
+                    { exercicio: exercicio.exercicio, dia: exercicio.dia },
                     exercicio.series ?? 1
                   )}
                 />
@@ -180,7 +181,7 @@ const TreinoPersonalizadoSession = () => {
         </motion.div>
       </div>
       <footer className="mt-8 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
-        © 2026 Paulo Dias - Red. Todos os direitos reservados.
+        © 2026 Diário de Academia. Todos os direitos reservados.
       </footer>
     </>
   );

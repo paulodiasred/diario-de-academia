@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// Limites espelhados em src/domain/schemas.ts. Altere os dois juntos.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() {
+      return request.auth != null;
+    }
+
+    function dono(dados) {
+      return logado() && dados.userId == request.auth.uid;
+    }
+
+    function registroValido(d) {
+      return d.keys().hasAll(['userId', 'exercicio', 'peso', 'serie', 'dia', 'data'])
+        && d.keys().hasOnly(['userId', 'exercicio', 'peso', 'serie', 'dia', 'data', 'concluida'])
+        && d.exercicio is string && d.exercicio.size() > 0 && d.exercicio.size() <= 200
+        && d.peso is number && d.peso >= 0 && d.peso <= 2000
+        && d.serie is int && d.serie >= 0 && d.serie <= 100
+        && d.dia is string && d.dia.size() > 0 && d.dia.size() <= 200
+        && d.data is timestamp
+        && d.get('concluida', true) is bool;
+    }
+
+    function treinoValido(d) {
+      return d.keys().hasAll(['userId', 'nome', 'exercicios', 'criadoEm', 'atualizadoEm'])
+        && d.keys().hasOnly(['userId', 'nome', 'descricao', 'dias', 'exercicios', 'criadoEm', 'atualizadoEm'])
+        && d.nome is string && d.nome.size() > 0 && d.nome.size() <= 120
+        && d.get('descricao', '') is string && d.get('descricao', '').size() <= 1000
+        && d.get('dias', []) is list && d.get('dias', []).size() <= 7
+        && d.exercicios is list && d.exercicios.size() > 0 && d.exercicios.size() <= 100
+        && d.atualizadoEm is timestamp;
+    }
+
+    match /registros/{id} {
+      allow read, delete: if dono(resource.data);
+      allow create: if dono(request.resource.data) && registroValido(request.resource.data);
+      // O app nunca edita um registro: corrigir é apagar e registrar de novo.
+      allow update: if false;
+    }
+
+    match /treinos/{id} {
+      allow read, delete: if dono(resource.data);
+      allow create: if dono(request.resource.data) && treinoValido(request.resource.data);
+      allow update: if dono(resource.data)
+        && request.resource.data.userId == resource.data.userId
+        && treinoValido(request.resource.data);
+    }
+
+    // Tudo que não foi liberado acima é negado.
+    match /{documento=**} {
+      allow read, write: if false;
+    }
+  }
+}

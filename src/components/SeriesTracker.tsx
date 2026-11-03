@@ -12,16 +12,19 @@ export function SeriesTracker({ seriesFeitas, onConcluirSerie, disabled }: Serie
     <div className="grid grid-cols-4 gap-3">
       {seriesFeitas.map((feita, index) => {
         const serie = index + 1;
+        // Desmarcar não depende de haver peso digitado.
+        const bloqueada = disabled && !feita;
         return (
           <motion.button
             key={serie}
-            onClick={() => !disabled && onConcluirSerie(serie, feita)}
-            disabled={disabled}
+            onClick={() => !bloqueada && onConcluirSerie(serie, feita)}
+            disabled={bloqueada}
+            aria-pressed={feita}
             whileTap={{ scale: 0.95 }}
             className={`relative p-4 rounded-2xl font-semibold transition-all ${
               feita
                 ? "bg-gradient-to-br from-primary to-accent text-primary-foreground"
-                : disabled
+                : bloqueada
                 ? "bg-secondary/30 text-muted-foreground cursor-not-allowed"
                 : "glass-card hover:border-primary/50 text-foreground"
             }`}

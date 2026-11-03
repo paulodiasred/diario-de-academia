@@ -1,121 +1,61 @@
-import { useState, useEffect, useCallback } from "react";
-import {
-  collection,
-  addDoc,
-  getDocs,
-  updateDoc,
-  deleteDoc,
-  doc,
-  query,
-  where,
-  orderBy,
-  Timestamp,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useAuth } from "./useAuth";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { TreinoPersonalizado } from "@/types/catalogo";
+import * as repositorio from "@/data/repositories/treinosRepository";
+import type { TreinoInput } from "@/domain/schemas";
+import { useAuth } from "./useAuth";
+
+const VAZIO: TreinoPersonalizado[] = [];
 
 export function useMeusTreinos() {
   const { user } = useAuth();
-  const [treinos, setTreinos] = useState<TreinoPersonalizado[]>([]);
-  const [loading, setLoading] = useState(true);
+  const uid = user?.uid;
+  const queryClient = useQueryClient();
+  const chave = ["treinos", uid];
 
-  const carregarTreinos = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      let data: TreinoPersonalizado[] = [];
-      try {
-        const q = query(
-          collection(db, "treinos"),
-          where("userId", "==", user.uid),
-          orderBy("criadoEm", "desc")
-        );
-        const snap = await getDocs(q);
-        data = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-          criadoEm:
-            d.data().criadoEm?.toDate?.()?.toISOString() ||
-            d.data().criadoEm,
-          atualizadoEm:
-            d.data().atualizadoEm?.toDate?.()?.toISOString() ||
-            d.data().atualizadoEm,
-        })) as TreinoPersonalizado[];
-      } catch {
-        const q = query(
-          collection(db, "treinos"),
-          where("userId", "==", user.uid)
-        );
-        const snap = await getDocs(q);
-        data = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-          criadoEm:
-            d.data().criadoEm?.toDate?.()?.toISOString() ||
-            d.data().criadoEm,
-          atualizadoEm:
-            d.data().atualizadoEm?.toDate?.()?.toISOString() ||
-            d.data().atualizadoEm,
-        })) as TreinoPersonalizado[];
-        data.sort(
-          (a, b) =>
-            new Date(b.criadoEm ?? 0).getTime() -
-            new Date(a.criadoEm ?? 0).getTime()
-        );
-      }
-      setTreinos(data);
-    } catch (e) {
-      console.error("Erro ao carregar treinos:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+  const consulta = useQuery({
+    queryKey: chave,
+    queryFn: () => repositorio.listarTreinos(uid as string),
+    enabled: !!uid,
+  });
 
-  useEffect(() => {
-    if (user) carregarTreinos();
-    else {
-      setTreinos([]);
-      setLoading(false);
-    }
-  }, [user, carregarTreinos]);
-
-  const criarTreino = async (
-    dados: Omit<TreinoPersonalizado, "id" | "userId" | "criadoEm" | "atualizadoEm">
-  ): Promise<string> => {
-    if (!user) throw new Error("Não autenticado");
-    const docRef = await addDoc(collection(db, "treinos"), {
-      ...dados,
-      userId: user.uid,
-      criadoEm: Timestamp.now(),
-      atualizadoEm: Timestamp.now(),
-    });
-    await carregarTreinos();
-    return docRef.id;
+  const alterarCache = (alterar: (atual: TreinoPersonalizado[]) => TreinoPersonalizado[]) => {
+    void queryClient.cancelQueries({ queryKey: chave });
+    queryClient.setQueryData<TreinoPersonalizado[]>(chave, (atual) => alterar(atual ?? []));
   };
 
-  const atualizarTreino = async (
-    id: string,
-    dados: Partial<Omit<TreinoPersonalizado, "id" | "userId">>
-  ) => {
-    await updateDoc(doc(db, "treinos", id), {
-      ...dados,
-      atualizadoEm: Timestamp.now(),
-    });
-    await carregarTreinos();
+  const aoFalhar = (mensagem: string) => (erro: unknown) => {
+    console.error(mensagem, erro);
+    toast.error(mensagem);
+    void queryClient.invalidateQueries({ queryKey: chave });
   };
 
-  const deletarTreino = async (id: string) => {
-    await deleteDoc(doc(db, "treinos", id));
-    setTreinos((prev) => prev.filter((t) => t.id !== id));
+  const criarTreino = async (dados: TreinoInput): Promise<string> => {
+    if (!uid) throw new Error("Não autenticado");
+    const { treino, confirmacao } = repositorio.criarTreino(uid, dados);
+    alterarCache((atual) => [treino, ...atual]);
+    confirmacao.catch(aoFalhar("Não foi possível salvar o treino."));
+    return treino.id as string;
+  };
+
+  const atualizarTreino = async (id: string, input: TreinoInput): Promise<void> => {
+    const { dados, confirmacao } = repositorio.atualizarTreino(id, input);
+    alterarCache((atual) => atual.map((t) => (t.id === id ? { ...t, ...dados } : t)));
+    confirmacao.catch(aoFalhar("Não foi possível atualizar o treino."));
+  };
+
+  const deletarTreino = async (id: string): Promise<void> => {
+    alterarCache((atual) => atual.filter((t) => t.id !== id));
+    repositorio.excluirTreino(id).catch(aoFalhar("Não foi possível excluir o treino."));
   };
 
   return {
-    treinos,
-    loading,
+    treinos: consulta.data ?? VAZIO,
+    loading: consulta.isLoading,
+    erro: consulta.isError,
     criarTreino,
     atualizarTreino,
     deletarTreino,
-    recarregar: carregarTreinos,
+    recarregar: () => consulta.refetch(),
   };
 }

@@ -4,20 +4,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Dumbbell,
   Flame,
-  Calendar,
   ArrowLeft,
   ChevronRight,
   LogOut,
   ListChecks,
 } from "lucide-react";
+import { toast } from "sonner";
 import { treino, dias, grupoIcons } from "@/data/treino";
+import { exercicioConcluidoHoje } from "@/domain/registros";
 import { useTreinoStorage } from "@/hooks/useTreinoStorage";
 import { useAuth } from "@/hooks/useAuth";
-import { DaySelector } from "@/components/DaySelector";
+import { ErrorState } from "@/components/ErrorState";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import { ExerciseDetail } from "@/components/ExerciseDetail";
 import { Button } from "@/components/ui/button";
-import type { Exercicio } from "@/data/treino";
 import { gerarTreinoComId, ExercicioInstanciado } from "@/data/treino";
 
 const Index = () => {
@@ -31,7 +31,9 @@ const Index = () => {
     getRegistrosPorExercicio,
     getUltimoPeso,
     loading,
-    reloadRegistros,
+    erro,
+    recarregar,
+    removerRegistro,
     registros,
   } = useTreinoStorage();
   const { logout, user } = useAuth();
@@ -41,6 +43,7 @@ const Index = () => {
       await logout();
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
+      toast.error(error instanceof Error ? error.message : "Não foi possível sair");
     }
   };
 
@@ -53,24 +56,6 @@ const Index = () => {
     const grupos = [...new Set(exerciciosDoDia.map((e) => e.grupo))];
     return grupos;
   }, [exerciciosDoDia]);
-
-  // Verifica se um exercício foi totalmente concluído hoje
-  const isExercicioConcluidoHoje = (
-    exercicioId: string,
-    totalSeries: number,
-  ) => {
-    const hoje = new Date().toDateString();
-
-    const registrosHoje = registros.filter(
-      (r) =>
-        new Date(r.data).toDateString() === hoje &&
-        r.exercicioId === exercicioId &&
-        r.userId === user?.uid,
-    );
-
-    const seriesConcluidas = new Set(registrosHoje.map((r) => r.serie)).size;
-    return seriesConcluidas >= totalSeries;
-  };
 
   const dayNameMap: Record<number, string> = {
     1: "Segunda",
@@ -96,14 +81,24 @@ const Index = () => {
   const getDayProgress = (dia: string) => {
     const exerciciosDia = treino.filter((e) => e.dia === dia);
     const total = exerciciosDia.length;
-    const hoje = new Date().toISOString().split("T")[0];
-    const concluidos = exerciciosDia.filter((e) => {
-      const id = `${e.exercicio}-${dia}-${hoje}`;
-      const series = "series" in e ? e.series : 1;
-      return isExercicioConcluidoHoje(id, series);
-    }).length;
+    const concluidos = exerciciosDia.filter((e) =>
+      exercicioConcluidoHoje(
+        registros,
+        { exercicio: e.exercicio, dia },
+        "series" in e ? e.series : 1,
+      ),
+    ).length;
     return { total, concluidos };
   };
+
+  if (erro) {
+    return (
+      <ErrorState
+        mensagem="Não foi possível carregar seus registros"
+        onTentarNovamente={() => void recarregar()}
+      />
+    );
+  }
 
   if (!selectedDay) {
     if (loading) {
@@ -146,6 +141,7 @@ const Index = () => {
                   onClick={handleLogout}
                   className="rounded-xl"
                   title="Sair"
+                  aria-label="Sair"
                 >
                   <LogOut className="w-5 h-5" />
                 </Button>
@@ -265,7 +261,7 @@ const Index = () => {
           </motion.div>
         </div>
         <footer className="mt-8 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
-          © 2026 Iron Buddy. Todos os direitos reservados.
+          © 2026 Diário de Academia. Todos os direitos reservados.
         </footer>
       </>
     );
@@ -274,18 +270,18 @@ const Index = () => {
   if (exercicioSelecionado) {
     return (
       <>
-        <div className="min-h-screen p-4 pb-8 max-w-md mx-auto">
+        <div className="min-h-screen p-4 pb-28 max-w-md mx-auto">
           <ExerciseDetail
             exercicio={exercicioSelecionado}
             registros={getRegistrosPorExercicio(exercicioSelecionado.exercicio)}
             ultimoPeso={getUltimoPeso(exercicioSelecionado.exercicio)}
             onVoltar={() => setExercicioSelecionado(null)}
             onSalvarRegistro={salvarRegistro}
-            reloadRegistros={reloadRegistros}
+            onRemoverRegistro={removerRegistro}
           />
         </div>
         <footer className="mt-2 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
-          © 2026 Iron Buddy. Todos os direitos reservados.
+          © 2026 Diário de Academia. Todos os direitos reservados.
         </footer>
       </>
     );
@@ -345,9 +341,10 @@ const Index = () => {
                           index={index}
                           ultimoPeso={getUltimoPeso(exercicio.exercicio)}
                           onClick={() => setExercicioSelecionado(exercicio)}
-                          isConcluido={isExercicioConcluidoHoje(
-                            exercicio.exercicio,
-                            "series" in exercicio ? exercicio.series : 1,
+                          isConcluido={exercicioConcluidoHoje(
+                            registros,
+                            { exercicio: exercicio.exercicio, dia: exercicio.dia },
+                            exercicio.series ?? 1,
                           )}
                         />
                       ))}
@@ -359,7 +356,7 @@ const Index = () => {
         </motion.div>
       </div>
       <footer className="mt-8 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
-        © 2026 Iron Buddy. Todos os direitos reservados.
+        © 2026 Diário de Academia. Todos os direitos reservados.
       </footer>
     </>
   );

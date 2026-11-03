@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Plus,
   Trash2,
-  GripVertical,
   Save,
   BookOpen,
   Calendar,
@@ -14,19 +13,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { CatalogoDrawer } from "@/components/CatalogoDrawer";
+import { ErrorState } from "@/components/ErrorState";
 import { useMeusTreinos } from "@/hooks/useMeusTreinos";
 import type { ExercicioCatalogo, ExercicioNoTreino } from "@/types/catalogo";
 import { MUSCULO_LABEL, CATEGORIA_LABEL, DIAS_SEMANA } from "@/types/catalogo";
 import { getExerciseImageUrl } from "@/lib/utils";
 import { toast } from "sonner";
 
+// O catálogo (920 KB) só é baixado quando o usuário abre a lista de exercícios.
+const CatalogoDrawer = lazy(() =>
+  import("@/components/CatalogoDrawer").then((m) => ({ default: m.CatalogoDrawer })),
+);
+
 const CriarEditarTreino = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const isEdicao = !!id;
 
-  const { treinos, criarTreino, atualizarTreino } = useMeusTreinos();
+  const { treinos, loading, erro, recarregar, criarTreino, atualizarTreino } =
+    useMeusTreinos();
 
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -34,19 +39,25 @@ const CriarEditarTreino = () => {
   const [exercicios, setExercicios] = useState<ExercicioNoTreino[]>([]);
   const [catalogoAberto, setCatalogoAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [catalogoCarregado, setCatalogoCarregado] = useState(false);
+  const formularioPreenchido = useRef(false);
 
-  // Carregar dados para edição
+  // Preenche uma única vez: recarregar a lista não pode apagar o que está sendo editado.
   useEffect(() => {
-    if (isEdicao && treinos.length > 0) {
-      const treino = treinos.find((t) => t.id === id);
-      if (treino) {
-        setNome(treino.nome);
-        setDescricao(treino.descricao ?? "");
-        setDias(treino.dias ?? []);
-        setExercicios(treino.exercicios);
-      }
+    if (!isEdicao || formularioPreenchido.current) return;
+    const treino = treinos.find((t) => t.id === id);
+    if (treino) {
+      formularioPreenchido.current = true;
+      setNome(treino.nome);
+      setDescricao(treino.descricao ?? "");
+      setDias(treino.dias ?? []);
+      setExercicios(treino.exercicios);
     }
   }, [id, isEdicao, treinos]);
+
+  useEffect(() => {
+    if (catalogoAberto) setCatalogoCarregado(true);
+  }, [catalogoAberto]);
 
   const toggleDia = (dia: string) => {
     setDias((prev) =>
@@ -101,12 +112,7 @@ const CriarEditarTreino = () => {
 
     setSalvando(true);
     try {
-      const dados = {
-        nome: nome.trim(),
-        descricao: descricao.trim() || undefined,
-        dias,
-        exercicios,
-      };
+      const dados = { nome, descricao, dias, exercicios };
 
       if (isEdicao && id) {
         await atualizarTreino(id, dados);
@@ -124,6 +130,39 @@ const CriarEditarTreino = () => {
   };
 
   const exerciciosAdicionadosIds = exercicios.map((e) => e.exercicioId);
+
+  if (isEdicao && erro) {
+    return (
+      <ErrorState
+        mensagem="Não foi possível carregar este treino"
+        onTentarNovamente={() => void recarregar()}
+      />
+    );
+  }
+
+  if (isEdicao && loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (isEdicao && !treinos.some((t) => t.id === id)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">Treino não encontrado</p>
+          <button
+            onClick={() => navigate("/meus-treinos")}
+            className="text-primary underline"
+          >
+            Voltar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -259,8 +298,6 @@ const CriarEditarTreino = () => {
                       className="glass-card rounded-2xl p-3"
                     >
                       <div className="flex items-start gap-2">
-                        <GripVertical className="w-4 h-4 text-muted-foreground mt-1 shrink-0" />
-
                         {/* Thumbnail */}
                         {ex.images && ex.images[0] && (
                           <div className="w-10 h-10 rounded-lg overflow-hidden bg-secondary/50 shrink-0 mt-0.5">
@@ -397,12 +434,16 @@ const CriarEditarTreino = () => {
         </motion.div>
       </div>
 
-      <CatalogoDrawer
-        open={catalogoAberto}
-        onClose={() => setCatalogoAberto(false)}
-        onAdicionar={adicionarExercicio}
-        exerciciosAdicionados={exerciciosAdicionadosIds}
-      />
+      {catalogoCarregado && (
+        <Suspense fallback={null}>
+          <CatalogoDrawer
+            open={catalogoAberto}
+            onClose={() => setCatalogoAberto(false)}
+            onAdicionar={adicionarExercicio}
+            exerciciosAdicionados={exerciciosAdicionadosIds}
+          />
+        </Suspense>
+      )}
     </>
   );
 };

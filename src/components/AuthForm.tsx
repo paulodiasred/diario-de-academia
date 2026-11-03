@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import { CANCELAMENTOS_LOGIN, codigoDoErro, mensagemErroAuth } from '@/domain/errosAuth';
 import { toast } from 'sonner';
 
 export function AuthForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,8 +22,7 @@ export function AuthForm() {
       await signIn(email, password);
       toast.success('Login realizado com sucesso!');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro no login';
-      toast.error(message);
+      toast.error(mensagemErroAuth(error));
     } finally {
       setLoading(false);
     }
@@ -35,8 +35,7 @@ export function AuthForm() {
       await signUp(email, password);
       toast.success('Conta criada com sucesso!');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao criar conta';
-      toast.error(message);
+      toast.error(mensagemErroAuth(error));
     } finally {
       setLoading(false);
     }
@@ -46,13 +45,33 @@ export function AuthForm() {
     setLoading(true);
     try {
       await signInWithGoogle();
-      toast.success('Login com Google realizado!');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro no login com Google';
-      toast.error(message);
+      if (!CANCELAMENTOS_LOGIN.has(codigoDoErro(error) ?? '')) {
+        toast.error(mensagemErroAuth(error));
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResetPassword = async () => {
+    if (!email.trim()) {
+      toast.error('Digite seu email no campo acima para recuperar a senha.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await resetPassword(email.trim());
+    } catch (error) {
+      // Conta inexistente recebe a mesma resposta: a tela não revela quem tem cadastro.
+      if (codigoDoErro(error) !== 'auth/user-not-found') {
+        toast.error(mensagemErroAuth(error));
+        return;
+      }
+    } finally {
+      setLoading(false);
+    }
+    toast.success('Se houver uma conta com este email, enviamos o link para redefinir a senha.');
   };
 
   return (
@@ -141,6 +160,16 @@ export function AuthForm() {
                   Entrar
                 </>
               )}
+            </Button>
+
+            <Button
+              type="button"
+              variant="link"
+              className="w-full"
+              disabled={loading}
+              onClick={handleResetPassword}
+            >
+              Esqueci minha senha
             </Button>
           </form>
         </TabsContent>

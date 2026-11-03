@@ -1,121 +1,67 @@
-import { useState, useEffect, useCallback } from "react";
-import { collection, addDoc, getDocs, query, where, orderBy, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { TreinoRegistro } from "@/data/treino";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import type { TreinoRegistro } from "@/data/treino";
+import {
+  criarRegistro,
+  excluirRegistro,
+  listarRegistros,
+} from "@/data/repositories/registrosRepository";
+import { ultimoPeso } from "@/domain/registros";
+import type { RegistroInput } from "@/domain/schemas";
 import { useAuth } from "./useAuth";
+
+const VAZIO: TreinoRegistro[] = [];
 
 export function useTreinoStorage() {
   const { user } = useAuth();
-  const [registros, setRegistros] = useState<TreinoRegistro[]>([]);
-  const [loading, setLoading] = useState(true);
+  const uid = user?.uid;
+  const queryClient = useQueryClient();
+  const chave = ["registros", uid];
 
-  const loadRegistros = useCallback(async () => {
-    if (!user) return;
+  const consulta = useQuery({
+    queryKey: chave,
+    queryFn: () => listarRegistros(uid as string),
+    enabled: !!uid,
+  });
+  const registros = consulta.data ?? VAZIO;
 
-    try {
-      // Primeiro tentar com orderBy (requer índice)
-      try {
-        const q = query(
-          collection(db, "registros"),
-          where("userId", "==", user.uid),
-          orderBy("data", "desc")
-        );
-
-        const querySnapshot = await getDocs(q);
-        const data = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          data: doc.data().data?.toDate?.()?.toISOString() || doc.data().data
-        })) as TreinoRegistro[];
-
-        setRegistros(data);
-      } catch (error) {
-        console.warn("Query com orderBy falhou, usando fallback sem orderBy");
-
-        // Fallback: buscar sem orderBy e ordenar no cliente
-        const q = query(
-          collection(db, "registros"),
-          where("userId", "==", user.uid)
-        );
-
-        const querySnapshot = await getDocs(q);
-        const data = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          data: doc.data().data?.toDate?.()?.toISOString() || doc.data().data
-        })) as TreinoRegistro[];
-
-        // Ordenar no cliente
-        data.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-
-        setRegistros(data);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar registros:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user) {
-      loadRegistros();
-    } else {
-      setRegistros([]);
-      setLoading(false);
-    }
-  }, [user, loadRegistros]);
-
-  const salvarRegistro = async (registro: Omit<TreinoRegistro, "id" | "data" | "userId">): Promise<TreinoRegistro> => {
-    if (!user) throw new Error("Usuário não autenticado");
-
-    try {
-      const docRef = await addDoc(collection(db, "registros"), {
-        ...registro,
-        userId: user.uid,
-        data: Timestamp.now(),
-        concluida: registro.concluida ?? true
-      });
-
-      const novoRegistro: TreinoRegistro = {
-        id: docRef.id,
-        ...registro,
-        userId: user.uid,
-        data: new Date().toISOString(),
-        concluida: registro.concluida ?? true
-      };
-
-      setRegistros(prev => [novoRegistro, ...prev]); // Add to beginning since ordered by date desc
-      return novoRegistro;
-    } catch (error) {
-      console.error("Erro ao salvar registro:", error);
-      throw error;
-    }
+  const alterarCache = (alterar: (atual: TreinoRegistro[]) => TreinoRegistro[]) => {
+    void queryClient.cancelQueries({ queryKey: chave });
+    queryClient.setQueryData<TreinoRegistro[]>(chave, (atual) => alterar(atual ?? []));
   };
 
-  const getRegistrosPorExercicio = (exercicio: string) => {
-    return registros.filter((r) => r.exercicio === exercicio);
+  /** Atualiza a tela na hora. A gravação segue em segundo plano, mesmo sem sinal. */
+  const salvarRegistro = async (input: RegistroInput): Promise<TreinoRegistro> => {
+    if (!uid) throw new Error("Usuário não autenticado");
+    const { registro, confirmacao } = criarRegistro(uid, input);
+    alterarCache((atual) => [registro, ...atual]);
+    confirmacao.catch((erro) => {
+      console.error("Erro ao salvar registro:", erro);
+      alterarCache((atual) => atual.filter((r) => r.id !== registro.id));
+      toast.error("Não foi possível salvar a série. Tente de novo.");
+    });
+    return registro;
   };
 
-  const getUltimoPeso = (exercicio: string): number | null => {
-    const regs = getRegistrosPorExercicio(exercicio);
-    if (regs.length === 0) return null;
-    return regs.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())[0].peso;
-  };
-
-  const getHistorico = (exercicio: string, limit = 6) => {
-    return getRegistrosPorExercicio(exercicio)
-      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-      .slice(0, limit);
+  const removerRegistro = async (registro: TreinoRegistro): Promise<void> => {
+    if (!registro.id) return;
+    alterarCache((atual) => atual.filter((r) => r.id !== registro.id));
+    excluirRegistro(registro.id).catch((erro) => {
+      console.error("Erro ao excluir registro:", erro);
+      alterarCache((atual) => [registro, ...atual]);
+      toast.error("Não foi possível desmarcar a série. Tente de novo.");
+    });
   };
 
   return {
     registros,
-    loading,
+    loading: consulta.isLoading,
+    erro: consulta.isError,
     salvarRegistro,
-    getRegistrosPorExercicio,
-    getUltimoPeso,
-    getHistorico,
-    reloadRegistros: loadRegistros,
+    removerRegistro,
+    getRegistrosPorExercicio: (exercicio: string) =>
+      registros.filter((r) => r.exercicio === exercicio),
+    getUltimoPeso: (exercicio: string) => ultimoPeso(registros, exercicio),
+    recarregar: () => consulta.refetch(),
   };
 }

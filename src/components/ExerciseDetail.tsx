@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -14,39 +14,34 @@ import {
   grupoIcons,
   TreinoRegistro,
 } from "@/data/treino";
-import { deleteDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import {
+  historicoPorDia,
+  localizarRegistroParaDesmarcar,
+  seriesFeitasHoje,
+} from "@/domain/registros";
+import type { RegistroInput } from "@/domain/schemas";
+import { useRestTimer } from "@/hooks/useRestTimer";
 import { getExerciseImageUrl } from "@/lib/utils";
 import { SeriesTracker } from "./SeriesTracker";
 import { CardioTracker } from "./CardioTracker";
-import { ProgressChart } from "./ProgressChart";
 import { CircularTimer } from "./CircularTimer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
-/* 🔑 FUNÇÕES DE CONFIRMAÇÃO DE TIPO */
-function isCardio(ex: ExercicioInstanciado) {
-  return ex.tipo === "Cardio";
-}
-
-function hasSeries(ex: ExercicioInstanciado) {
-  return ex.tipo === "Força" || ex.tipo === "Circuito";
-}
+// Recharts é pesado: só carrega ao abrir um exercício.
+const ProgressChart = lazy(() =>
+  import("./ProgressChart").then((m) => ({ default: m.ProgressChart })),
+);
 
 interface ExerciseDetailProps {
   exercicio: ExercicioInstanciado;
+  /** Todos os registros deste exercício, de qualquer treino. */
   registros: TreinoRegistro[];
   ultimoPeso: number | null;
   onVoltar: () => void;
-  onSalvarRegistro: (registro: {
-    exercicio: string;
-    peso: number;
-    serie: number;
-    dia: string;
-    concluida?: boolean;
-  }) => Promise<TreinoRegistro>;
-  reloadRegistros: () => Promise<void>;
+  onSalvarRegistro: (registro: RegistroInput) => Promise<TreinoRegistro>;
+  onRemoverRegistro: (registro: TreinoRegistro) => Promise<void>;
 }
 
 export function ExerciseDetail({
@@ -55,184 +50,53 @@ export function ExerciseDetail({
   ultimoPeso,
   onVoltar,
   onSalvarRegistro,
-  reloadRegistros,
+  onRemoverRegistro,
 }: ExerciseDetailProps) {
   const [peso, setPeso] = useState(ultimoPeso?.toString() || "");
+  const ehCardio = exercicio.tipo === "Cardio";
   const totalSeries = exercicio.series ?? 1;
-
-  const [seriesFeitas, setSeriesFeitas] = useState<boolean[]>(() => {
-    if (!hasSeries(exercicio)) return [];
-    return new Array(totalSeries).fill(false);
-  });
-
-  const [cardioConcluido, setCardioConcluido] = useState(false);
-  const [tempoRestante, setTempoRestante] = useState(0);
-  const [timerAtivo, setTimerAtivo] = useState(false);
-
-  // Guarda o timestamp exato em que o timer deve acabar
-  const endTimeRef = useRef<number | null>(null);
-
+  const descanso = exercicio.descanso ?? 0;
   const icon = grupoIcons[exercicio.grupo] || "🏋️";
 
-  const iniciarDescanso = useCallback(() => {
-    if (!hasSeries(exercicio)) return;
-    endTimeRef.current = Date.now() + exercicio.descanso * 1000;
-    setTempoRestante(exercicio.descanso);
-    setTimerAtivo(true);
-  }, [exercicio]);
-  const historico = useMemo(() => {
-    const hoje = new Date();
-    const seteDiasAtras = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const alvo = useMemo(
+    () => ({ exercicio: exercicio.exercicio, dia: exercicio.dia }),
+    [exercicio.exercicio, exercicio.dia],
+  );
 
-    // Filtrar registros dos últimos 7 dias e concluídos
-    const registrosFiltrados = registros.filter(
-      (r) => new Date(r.data) >= seteDiasAtras && r.concluida,
-    );
+  const feitasHoje = useMemo(() => seriesFeitasHoje(registros, alvo), [registros, alvo]);
+  const seriesFeitas = useMemo(
+    () =>
+      ehCardio
+        ? []
+        : Array.from({ length: totalSeries }, (_, i) => feitasHoje.has(i + 1)),
+    [ehCardio, totalSeries, feitasHoje],
+  );
+  const concluido = ehCardio ? feitasHoje.size > 0 : seriesFeitas.every(Boolean);
 
-    // Agrupar por data e calcular média
-    const agrupadoPorData = registrosFiltrados.reduce(
-      (acc, r) => {
-        const dataStr = new Date(r.data).toLocaleDateString("pt-BR");
-        if (!acc[dataStr]) {
-          acc[dataStr] = { pesos: [], data: r.data };
-        }
-        acc[dataStr].pesos.push(r.peso);
-        return acc;
-      },
-      {} as Record<string, { pesos: number[]; data: string }>,
-    );
+  const historico = useMemo(() => historicoPorDia(registros), [registros]);
 
-    // Calcular médias e ordenar por data decrescente
-    return Object.entries(agrupadoPorData)
-      .map(([dataStr, { pesos, data }]) => ({
-        data: data,
-        dataStr,
-        media: pesos.reduce((sum, p) => sum + p, 0) / pesos.length,
-        series: pesos.length,
-      }))
-      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-      .slice(0, 5); // Últimos 5 dias
-  }, [registros]);
+  const timer = useRestTimer(descanso, () => toast.success("Descanso finalizado! 💪"));
 
+  // Volta para a lista só quando o exercício ACABOU de ser concluído. Quem reabre um
+  // exercício já concluído continua na tela e pode corrigir uma série.
+  const concluidoAntes = useRef(concluido);
+  const onVoltarRef = useRef(onVoltar);
+  onVoltarRef.current = onVoltar;
   useEffect(() => {
-    if (!timerAtivo || !endTimeRef.current) return;
-
-    const tick = () => {
-      const restante = Math.round((endTimeRef.current! - Date.now()) / 1000);
-      if (restante <= 0) {
-        setTempoRestante(0);
-        setTimerAtivo(false);
-        endTimeRef.current = null;
-        toast.success("Descanso finalizado! 💪");
-        return;
-      }
-      setTempoRestante(restante);
-    };
-
-    tick(); // atualiza imediatamente ao iniciar
-
-    // Intervalo curto para precisão melhor
-    const interval = setInterval(tick, 500);
-
-    // Quando o usuário volta pra aba, sincroniza na hora
-    const onVisibilityChange = () => {
-      if (!document.hidden) tick();
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
-  }, [timerAtivo]);
-
-  // Inicializar séries baseadas em registros existentes
-  useEffect(() => {
-    if (!hasSeries(exercicio)) {
-      setSeriesFeitas([]);
-      return;
-    }
-
-    const hoje = new Date();
-    const hojeStr =
-      hoje.getFullYear() + "-" + (hoje.getMonth() + 1) + "-" + hoje.getDate();
-    const registrosHoje = registros.filter((r) => {
-      return (
-        new Date(r.data).toDateString() === new Date().toDateString() &&
-        r.exercicio === exercicio.exercicio &&
-        r.dia === exercicio.dia &&
-        r.concluida === true
-      );
-    });
-
-    const novasSeries = new Array(totalSeries).fill(false);
-    registrosHoje.forEach((r) => {
-      if (r.serie >= 1 && r.serie <= totalSeries) {
-        novasSeries[r.serie - 1] = true;
-      }
-    });
-    setSeriesFeitas(novasSeries);
-  }, [registros, exercicio, totalSeries]);
-
-  const isExercicioConcluidoHoje =
-    exercicio.tipo === "Cardio"
-      ? cardioConcluido
-      : seriesFeitas.every((feita) => feita);
-
-  // verifica conclusao do exercicio em tela
-  useEffect(() => {
-    if (isExercicioConcluidoHoje) {
-      toast.success(
-        "Você já completou todas as séries deste exercício hoje! Volte amanhã para treiná-lo novamente! 🎉",
-      );
-      setTimeout(onVoltar, 800);
-    }
-  }, [isExercicioConcluidoHoje, onVoltar]);
-
-  const pausarTimer = () => {
-    // Guarda quanto restava para poder retomar
-    endTimeRef.current = null;
-    setTimerAtivo(false);
-  };
-
-  const resetarTimer = () => {
-    endTimeRef.current = null;
-    setTimerAtivo(false);
-    if (hasSeries(exercicio)) {
-      setTempoRestante(exercicio.descanso ?? 0);
-    } else {
-      setSeriesFeitas([]);
-    }
-  };
+    const acabouDeConcluir = concluido && !concluidoAntes.current;
+    concluidoAntes.current = concluido;
+    if (!acabouDeConcluir) return;
+    toast.success(ehCardio ? "Cardio concluído! ❤️‍🔥" : "Exercício concluído! 🎉");
+    const espera = setTimeout(() => onVoltarRef.current(), 800);
+    return () => clearTimeout(espera);
+  }, [concluido, ehCardio]);
 
   const concluirSerie = async (serie: number, desmarcar = false) => {
-    if (!hasSeries(exercicio)) {
-      setSeriesFeitas([]);
-      return;
-    }
-
     if (desmarcar) {
-      // Encontrar e remover o registro da série
-      const registrosDaSerie = registros.filter(
-        (r) => r.serie === serie && r.concluida,
-      );
-      if (registrosDaSerie.length > 0) {
-        // Remover o mais recente
-        const registroMaisRecente = registrosDaSerie.sort(
-          (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime(),
-        )[0];
-
-        try {
-          await deleteDoc(doc(db, "registros", registroMaisRecente.id!));
-          const novasSeries = [...seriesFeitas];
-          novasSeries[serie - 1] = false;
-          setSeriesFeitas(novasSeries);
-          await reloadRegistros();
-          toast.success(`Série ${serie} desmarcada!`);
-        } catch (error) {
-          console.error("Erro ao desmarcar série:", error);
-          toast.error("Erro ao desmarcar série");
-        }
+      const registro = localizarRegistroParaDesmarcar(registros, alvo, serie);
+      if (registro) {
+        await onRemoverRegistro(registro);
+        toast.success(`Série ${serie} desmarcada!`);
       }
       return;
     }
@@ -244,26 +108,22 @@ export function ExerciseDetail({
     }
 
     try {
-      await onSalvarRegistro({
-        exercicio: exercicio.exercicio,
-        peso: pesoNum,
-        serie,
-        dia: exercicio.dia,
-        concluida: true,
-      });
-
-      const novasSeries = [...seriesFeitas];
-      novasSeries[serie - 1] = true;
-      setSeriesFeitas(novasSeries);
-
+      await onSalvarRegistro({ ...alvo, peso: pesoNum, serie, concluida: true });
       toast.success(`Série ${serie} concluída!`);
-
-      if (exercicio.descanso > 0) {
-        iniciarDescanso();
-      }
+      if (descanso > 0) timer.iniciar();
     } catch (error) {
       console.error("Erro ao salvar série:", error);
-      toast.error("Erro ao salvar série");
+      toast.error("Confira os valores da série e tente de novo");
+    }
+  };
+
+  const concluirCardio = async () => {
+    if (concluido) return;
+    try {
+      await onSalvarRegistro({ ...alvo, peso: 0, serie: 0, concluida: true });
+    } catch (error) {
+      console.error("Erro ao salvar cardio:", error);
+      toast.error("Não foi possível salvar o cardio");
     }
   };
 
@@ -281,6 +141,7 @@ export function ExerciseDetail({
           size="icon"
           onClick={onVoltar}
           className="rounded-xl"
+          aria-label="Voltar"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -332,29 +193,34 @@ export function ExerciseDetail({
       )}
 
       {/* Timer */}
-      {exercicio.tipo !== "Cardio" && exercicio.descanso > 0 && (
+      {!ehCardio && descanso > 0 && (
         <div className="glass-card rounded-3xl p-6">
           <CircularTimer
-            tempoRestante={tempoRestante}
-            tempoTotal={exercicio.descanso}
-            isActive={timerAtivo}
+            tempoRestante={timer.restante}
+            tempoTotal={descanso}
+            isActive={timer.ativo}
           />
           <div className="flex justify-center gap-3 mt-4">
-            {!timerAtivo ? (
-              <Button
-                onClick={iniciarDescanso}
-                className="bg-gradient-to-r from-primary to-accent hover:opacity-90"
-              >
-                <Play className="w-4 h-4 mr-2" />
-                Iniciar Descanso
-              </Button>
-            ) : (
-              <Button onClick={pausarTimer} variant="secondary">
+            {timer.ativo ? (
+              <Button onClick={timer.pausar} variant="secondary">
                 <Pause className="w-4 h-4 mr-2" />
                 Pausar
               </Button>
+            ) : (
+              <Button
+                onClick={timer.pausado ? timer.retomar : timer.iniciar}
+                className="bg-gradient-to-r from-primary to-accent hover:opacity-90"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                {timer.pausado ? "Retomar" : "Iniciar Descanso"}
+              </Button>
             )}
-            <Button onClick={resetarTimer} variant="outline" size="icon">
+            <Button
+              onClick={timer.resetar}
+              variant="outline"
+              size="icon"
+              aria-label="Reiniciar descanso"
+            >
               <RotateCcw className="w-4 h-4" />
             </Button>
           </div>
@@ -362,20 +228,25 @@ export function ExerciseDetail({
       )}
 
       {/* Peso Input */}
-      {exercicio.tipo !== "Cardio" && (
+      {!ehCardio && (
         <div className="glass-card rounded-2xl p-4">
-          <label className="text-sm text-muted-foreground mb-2 block">
+          <label
+            htmlFor="peso-atual"
+            className="text-sm text-muted-foreground mb-2 block"
+          >
             Peso atual (kg)
           </label>
           <div className="flex gap-3">
             <Input
+              id="peso-atual"
               type="number"
+              inputMode="decimal"
               value={peso}
               onChange={(e) => setPeso(e.target.value)}
               placeholder="Ex: 50"
               className="text-lg font-semibold bg-secondary/30 border-secondary"
             />
-            {ultimoPeso && (
+            {ultimoPeso !== null && (
               <div className="flex items-center gap-2 px-4 bg-secondary/30 rounded-xl">
                 <span className="text-muted-foreground text-sm">Último:</span>
                 <span className="font-bold text-primary">{ultimoPeso}kg</span>
@@ -386,7 +257,7 @@ export function ExerciseDetail({
       )}
 
       {/* Series */}
-      {exercicio.tipo !== "Cardio" && (
+      {!ehCardio && (
         <div className="glass-card rounded-2xl p-4">
           <h3 className="font-semibold mb-4 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-primary" />
@@ -401,33 +272,15 @@ export function ExerciseDetail({
         </div>
       )}
 
-      {exercicio.tipo === "Cardio" && (
+      {ehCardio && (
         <div className="glass-card rounded-2xl p-4">
           <h3 className="font-semibold mb-4">Cardio</h3>
-
-          <CardioTracker
-            concluido={cardioConcluido}
-            onToggle={async () => {
-              setCardioConcluido(true);
-
-              await onSalvarRegistro({
-                exercicio: exercicio.exercicio,
-                peso: 0,
-                serie: 0,
-                dia: exercicio.dia,
-                concluida: true,
-              });
-
-              toast.success("Cardio concluído! ❤️🔥");
-              setTimeout(onVoltar, 800);
-            }}
-          />
+          <CardioTracker concluido={concluido} onToggle={concluirCardio} />
         </div>
       )}
 
       {/* Histórico */}
-      {/* Histórico */}
-      {exercicio.tipo !== "Cardio" && (
+      {!ehCardio && (
         <div className="glass-card rounded-2xl p-4">
           <h3 className="font-semibold mb-4 flex items-center gap-2">
             <History className="w-4 h-4 text-primary" />
@@ -471,13 +324,15 @@ export function ExerciseDetail({
       )}
 
       {/* Gráfico */}
-      {exercicio.tipo !== "Cardio" && (
+      {!ehCardio && (
         <div className="glass-card rounded-2xl p-4">
           <h3 className="font-semibold mb-4 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-primary" />
             Evolução
           </h3>
-          <ProgressChart registros={registros} />
+          <Suspense fallback={<div className="h-48" />}>
+            <ProgressChart registros={registros} />
+          </Suspense>
         </div>
       )}
     </motion.div>

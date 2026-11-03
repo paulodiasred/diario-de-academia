@@ -20,13 +20,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ErrorState } from "@/components/ErrorState";
 import { useMeusTreinos } from "@/hooks/useMeusTreinos";
 import { MUSCULO_LABEL, CATEGORIA_LABEL, DIAS_SEMANA } from "@/types/catalogo";
 import { toast } from "sonner";
 
 const MeusTreinos = () => {
   const navigate = useNavigate();
-  const { treinos, loading, deletarTreino } = useMeusTreinos();
+  const { treinos, loading, erro, recarregar, deletarTreino } = useMeusTreinos();
   const [deletandoId, setDeletandoId] = useState<string | null>(null);
 
   const handleDeletar = async () => {
@@ -40,6 +41,15 @@ const MeusTreinos = () => {
       setDeletandoId(null);
     }
   };
+
+  if (erro) {
+    return (
+      <ErrorState
+        mensagem="Não foi possível carregar seus treinos"
+        onTentarNovamente={() => void recarregar()}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -246,7 +256,7 @@ const MeusTreinos = () => {
       </AlertDialog>
 
       <footer className="mt-8 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
-        © 2026 Paulo Dias - Red. Todos os direitos reservados.
+        © 2026 Diário de Academia. Todos os direitos reservados.
       </footer>
     </>
   );

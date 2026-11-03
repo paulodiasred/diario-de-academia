@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { TreinoRegistro } from "@/data/treino";
+import { pontosDoGrafico } from "@/domain/registros";
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -16,15 +16,7 @@ interface ProgressChartProps {
 }
 
 export function ProgressChart({ registros }: ProgressChartProps) {
-  const data = useMemo(() => {
-    return registros.slice(-10).map((r) => ({
-      data: new Date(r.data).toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-      }),
-      peso: r.peso,
-    }));
-  }, [registros]);
+  const data = useMemo(() => pontosDoGrafico(registros), [registros]);
 
   if (data.length === 0) {
     return (

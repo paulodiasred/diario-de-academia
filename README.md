@@ -62,14 +62,22 @@ npm install
 
 ### 3) Ambiente Firebase
 
-Atualmente as credenciais estao definidas em `src/lib/firebase.ts`.
+A configuracao vem das variaveis `VITE_FIREBASE_*` (veja `.env.example`). Sem elas, o app usa o projeto de producao.
+
+Para desenvolver sem tocar em producao, use os emuladores (exigem Java 11 ou superior):
+
+```bash
+npm run emuladores     # em um terminal
+npm run dev:emulador   # em outro
+```
 
 Se quiser usar seu proprio projeto Firebase:
 
 1. Crie um projeto no Firebase
 2. Ative Authentication (Email/Senha e Google, opcional)
 3. Crie um banco Firestore
-4. Substitua as chaves em `src/lib/firebase.ts`
+4. Copie `.env.example` para `.env.local` e preencha os valores
+5. Publique as regras: `npx firebase deploy --only firestore:rules`
 
 ### 4) Executar
 
@@ -88,6 +96,9 @@ Abra o endereco mostrado no terminal (normalmente `http://localhost:5173`).
 - `npm run lint`: executa ESLint
 - `npm run test`: executa testes uma vez
 - `npm run test:watch`: executa testes em modo observacao
+- `npm run typecheck`: verifica os tipos
+- `npm run test:rules`: testa as regras do Firestore no emulador (exige Java)
+- `npm run test:e2e`: testa o fluxo principal em viewport mobile, nos emuladores (exige Java e `npx playwright install chromium`)
 
 ## Estrutura principal
 
@@ -95,10 +106,14 @@ Abra o endereco mostrado no terminal (normalmente `http://localhost:5173`).
 src/
   components/      # componentes de UI e fluxo de treino
   contexts/        # contexto de autenticacao
-  data/            # definicao dos treinos e tipos
+  data/            # definicao dos treinos e repositorios do Firestore
+  domain/          # regras de negocio em funcoes puras, com testes
   hooks/           # hooks de auth e persistencia
   lib/             # integracoes (Firebase, utils)
   pages/           # paginas principais
+tests/rules/       # testes de seguranca do Firestore
+e2e/               # testes de ponta a ponta
+docs/              # diagnostico, roadmap e registro das fases
 ```
 
 ## Deploy
@@ -110,8 +125,6 @@ Fluxo recomendado:
 1. `npm run build`
 2. Publicar o conteudo da pasta `dist`
 
-## Proximos passos sugeridos
+## Roadmap
 
-- Mover configuracao Firebase para variaveis de ambiente (`.env`)
-- Adicionar mais testes de componentes e fluxo de treino
-- Criar dashboard com estatisticas semanais/mensais
+Veja [docs/diagnostico-e-roadmap.md](docs/diagnostico-e-roadmap.md) e o registro da fase atual em [docs/fase-2-fundacao.md](docs/fase-2-fundacao.md).

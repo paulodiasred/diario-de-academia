@@ -24,11 +24,11 @@ export function ExerciseCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      onClick={isConcluido ? undefined : onClick}
-      className={`glass-card rounded-2xl p-4 transition-all group ${
+      onClick={onClick}
+      className={`glass-card rounded-2xl p-4 transition-all group cursor-pointer ${
         isConcluido
-          ? "opacity-75 cursor-not-allowed bg-success/10 border-success/30"
-          : "cursor-pointer hover:border-primary/30"
+          ? "bg-success/10 border-success/30"
+          : "hover:border-primary/30"
       }`}
     >
       <div className="flex items-center justify-between">
@@ -61,7 +61,7 @@ export function ExerciseCard({
                 {exercicio.grupo}
               </span>
 
-              {"descanso" in exercicio && exercicio.descanso > 0 && (
+              {(exercicio.descanso ?? 0) > 0 && (
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   {exercicio.descanso}s

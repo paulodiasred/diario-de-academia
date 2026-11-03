@@ -316,6 +316,7 @@ export function CatalogoDrawer({
                         size="sm"
                         variant={jaAdicionado ? "secondary" : "default"}
                         className="shrink-0 h-8 w-8 p-0 rounded-xl"
+                        aria-label={`Adicionar ${ex.name}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!jaAdicionado) onAdicionar(ex);
