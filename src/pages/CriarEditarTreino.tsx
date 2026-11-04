@@ -1,7 +1,8 @@
 import { lazy, Suspense, useCallback, useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { MotionConfig, Reorder } from "framer-motion";
-import { ArrowLeft, Plus, BookOpen, Calendar } from "lucide-react";
+import { Plus, BookOpen, Calendar } from "lucide-react";
+import { Cabecalho } from "@/components/Cabecalho";
 import { CatalogoCarregando } from "@/components/CatalogoCarregando";
 import { TelaCarregando } from "@/components/Estados";
 import { ExercicioEditavel } from "@/components/treino/ExercicioEditavel";
@@ -31,7 +32,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMeusTreinos } from "@/hooks/useMeusTreinos";
 import type { ExercicioCatalogo, ExercicioNoTreino } from "@/types/catalogo";
 import { DIAS_SEMANA } from "@/types/catalogo";
-import { toast } from "sonner";
+import { toast } from "@/lib/aviso";
 
 // O catálogo (920 KB) só é baixado quando o usuário abre a lista de exercícios.
 const CatalogoDrawer = lazy(() =>
@@ -243,18 +244,7 @@ const CriarEditarTreino = () => {
   return (
     <MotionConfig reducedMotion="user">
       <div className="min-h-screen p-4 max-w-md mx-auto pb-32 space-y-5">
-        {/* Header */}
-        <div className="pt-4 flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Voltar"
-            onClick={voltar}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-xl font-bold flex-1">{isEdicao ? "Editar treino" : "Novo treino"}</h1>
-        </div>
+<Cabecalho titulo={isEdicao ? "Editar treino" : "Novo treino"} onVoltar={voltar} />
 
         {/* Nome e descrição */}
         <div className="glass-card rounded-xl p-4 space-y-3">
@@ -273,10 +263,10 @@ const CriarEditarTreino = () => {
                 setNome(e.target.value);
                 setErroNome(false);
               }}
-              className={`bg-secondary/30 ${erroNome ? "border-destructive" : ""}`}
+              className={`bg-surface-2 ${erroNome ? "border-destructive" : ""}`}
             />
             {erroNome && (
-              <p id="treino-nome-erro" role="alert" className="mt-1 text-[13px] text-destructive">
+              <p id="treino-nome-erro" role="alert" className="mt-1 text-caption text-destructive">
                 Dê um nome ao treino
               </p>
             )}
@@ -290,7 +280,7 @@ const CriarEditarTreino = () => {
               placeholder="Ex: Treino de hipertrofia, foco em volume"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
-              className="bg-secondary/30 resize-none text-sm"
+              className="bg-surface-2 resize-none text-sm"
               rows={2}
             />
           </div>
@@ -301,7 +291,7 @@ const CriarEditarTreino = () => {
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-primary" />
             <span className="font-semibold text-sm">Dias da semana</span>
-            <span className="text-[13px] text-muted-foreground ml-auto">
+            <span className="text-caption text-muted-foreground ml-auto">
               {dias.length === 0
                 ? "Nenhum selecionado"
                 : `${dias.length} dia${dias.length !== 1 ? "s" : ""}`}
@@ -319,7 +309,7 @@ const CriarEditarTreino = () => {
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
                     selecionado
                       ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-secondary/30 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                      : "bg-surface-2 text-muted-foreground hover:border-primary/40 hover:text-foreground"
                   }`}
                 >
                   {dia}
@@ -339,7 +329,7 @@ const CriarEditarTreino = () => {
             <Button
               variant="outline"
               size="sm"
-              className="h-9 gap-1.5 text-[13px] rounded-lg"
+              className="h-9 gap-1.5 text-caption rounded-lg"
               onClick={() => setCatalogoAberto(true)}
             >
               <BookOpen className="w-3.5 h-3.5" />
@@ -348,7 +338,7 @@ const CriarEditarTreino = () => {
           </div>
 
           {erroExercicios && (
-            <p role="alert" className="text-[13px] text-destructive">
+            <p role="alert" className="text-caption text-destructive">
               Adicione pelo menos um exercício
             </p>
           )}

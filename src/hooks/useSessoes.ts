@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/aviso";
 import { excluirSessao, listarSessoes, regravarSessao } from "@/data/repositories/sessoesRepository";
 import type { Sessao } from "@/domain/sessao";
 import { useAuth } from "./useAuth";

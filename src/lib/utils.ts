@@ -1,5 +1,10 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+// Sem isso, text-caption seria confundido com uma cor e removeria text-muted-foreground.
+const twMerge = extendTailwindMerge({
+  extend: { classGroups: { "font-size": ["text-caption", "text-micro"] } },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

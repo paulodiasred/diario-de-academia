@@ -468,7 +468,7 @@ test.describe("dados antigos", () => {
     await expect(page.getByText("Monte seu primeiro treino")).toBeVisible();
     await page.goto("/meus-treinos");
     await expect(page.getByRole("heading", { name: "Segunda", exact: true })).toBeHidden();
-    await expect(page.getByText("Você ainda não tem treinos salvos.")).toBeVisible();
+    await expect(page.getByText("Você ainda não tem treinos salvos")).toBeVisible();
   });
 });
 
@@ -939,7 +939,7 @@ test.describe("confiança nos dados", () => {
     await criarTreino(page);
     await page.getByRole("button", { name: "Excluir Treino de teste" }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Excluir", exact: true }).click();
-    await expect(page.getByText("Você ainda não tem treinos salvos.")).toBeVisible();
+    await expect(page.getByText("Você ainda não tem treinos salvos")).toBeVisible();
     await page.getByRole("button", { name: "Desfazer" }).click();
     await expect(page.getByRole("heading", { name: "Treino de teste" })).toBeVisible();
   });
@@ -1105,6 +1105,7 @@ test.describe("primeiro treino", () => {
     await expect.poll(nomes).toEqual(["Configurar Abdominal 3/4", "Configurar Supino Inclinado com Halteres"]);
 
     await page.getByRole("button", { name: "Salvar" }).click();
+    await expect(page.getByRole("heading", { name: "Meus Treinos" })).toBeVisible();
     await page.reload();
     await iniciar(page, "Arrastar");
     await expect(page.getByRole("heading", { name: "Abdominal 3/4" })).toBeVisible();
@@ -1405,6 +1406,141 @@ test.describe("treino com uma mão", () => {
     await concluir(page, 1);
     await finalizar(page);
     await expect(page.getByText("0:45")).toBeVisible();
+  });
+});
+
+test.describe("acessibilidade e padrões", () => {
+  for (const tema of ["dark", "light"]) {
+    test(`estados que antes ficavam de fora, sem violações graves, tema ${tema}`, async ({ page }) => {
+      test.setTimeout(120_000);
+      await page.addInitScript((t) => localStorage.setItem("theme", t), tema);
+      const analisar = async (nome: string) => {
+        await page.waitForTimeout(500);
+        const { violations } = await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+          .analyze();
+        const graves = violations
+          .filter((v) => v.impact === "serious" || v.impact === "critical")
+          .map((v) => `${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(" | ")}`);
+        expect(graves, nome).toEqual([]);
+      };
+
+      await criarConta(page);
+      await page.goto("/meus-treinos/modelos");
+      await page.getByRole("button", { name: /^ABC(?!D)/ }).click();
+      await analisar("modelo aberto");
+      await page.getByRole("button", { name: "Usar este modelo" }).click();
+      await expect(page.getByRole("heading", { name: "Treino C - Pernas" })).toBeVisible();
+      await analisar("treinos com dias e músculos");
+      // Durante a animação de saída, o aviso fica transparente e o axe mede um contraste que não existe.
+      await expect(page.locator("[data-sonner-toast]")).toHaveCount(0, { timeout: 10_000 });
+
+      await page.getByRole("button", { name: /^Editar Treino C/ }).click();
+      await page.getByRole("button", { name: "Configurar Agachamento Livre com Barra" }).click();
+      await analisar("edição com exercício aberto");
+      await page.getByRole("button", { name: "Catálogo", exact: true }).click();
+      await page.getByRole("button", { name: "Filtros" }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "Pernas", exact: true }).click();
+      await analisar("catálogo com filtros");
+      await page.keyboard.press("Escape");
+      await page.goto("/meus-treinos");
+
+      await iniciar(page, "Treino C - Pernas");
+      await page.getByLabel("Peso da série 1 em kg").fill("80");
+      for (const n of [1, 2, 3, 4]) await page.getByRole("button", { name: `Concluir série ${n}`, exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Leg Press" })).toBeVisible();
+      await analisar("treino com exercício concluído");
+      await page.getByRole("button", { name: /Ver lista de exercícios/ }).click();
+      await analisar("lista do treino");
+      await page.keyboard.press("Escape");
+
+      for (let i = 0; i < 5; i++) await page.getByRole("button", { name: "Menos 15 segundos" }).click();
+      await expect(page.getByText("Hora da próxima série")).toBeVisible({ timeout: 25_000 });
+      await analisar("fim do descanso");
+      await page.getByRole("button", { name: "Dispensar aviso" }).click();
+
+      await page.getByRole("button", { name: "Voltar ao início" }).click();
+      await expect(page.getByRole("button", { name: /Continuar Treino C/ })).toBeVisible();
+      await analisar("barra de treino ativo");
+      await page.goto("/treino");
+      await finalizar(page);
+      await page.getByRole("button", { name: "Corrigir" }).click();
+      await analisar("corrigir treino");
+      await page.keyboard.press("Escape");
+      await page.goto("/conta");
+      await page.getByRole("button", { name: "Sair da conta" }).click();
+      await analisar("confirmar saída");
+    });
+  }
+
+  test("cada tela tem título próprio, e o foco acompanha a navegação", async ({ page }) => {
+    await page.goto("/");
+    await expect(page).toHaveTitle(/^Entrar · /);
+    await criarConta(page);
+    await expect(page).toHaveTitle("Início · Diário de Academia");
+
+    const barra = page.getByRole("navigation", { name: "Principal" });
+    await expect(barra.getByRole("button", { name: "Início" })).toHaveAttribute("aria-current", "page");
+    await barra.getByRole("button", { name: "Exercícios" }).click();
+    await expect(page).toHaveTitle("Exercícios · Diário de Academia");
+    await expect(barra.getByRole("button", { name: "Exercícios" })).toHaveAttribute("aria-current", "page");
+    await expect(barra.getByRole("button", { name: "Início" })).not.toHaveAttribute("aria-current", "page");
+    await expect(page.locator("main")).toBeFocused();
+
+    await page.goto("/termos");
+    await expect(page).toHaveTitle(/^Termos de uso · /);
+  });
+
+  test("login: gerenciador de senhas entende os campos, e dá para ver a senha", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("#signin-email")).toHaveAttribute("autocomplete", "email");
+    const senha = page.locator("#signin-password");
+    await expect(senha).toHaveAttribute("autocomplete", "current-password");
+    await senha.fill("minha-senha");
+    await expect(senha).toHaveAttribute("type", "password");
+    await page.getByRole("button", { name: "Mostrar senha" }).click();
+    await expect(senha).toHaveAttribute("type", "text");
+    await expect(senha).toHaveValue("minha-senha");
+    await page.getByRole("button", { name: "Ocultar senha" }).click();
+    await expect(senha).toHaveAttribute("type", "password");
+
+    await page.getByRole("tab", { name: "Cadastrar" }).click();
+    await expect(page.locator("#signup-password")).toHaveAttribute("autocomplete", "new-password");
+    await expect(page.getByText("Pelo menos 6 caracteres.")).toBeVisible();
+  });
+
+  test("catálogo funciona só com o teclado, e os filtros usam o seletor do sistema", async ({ page }) => {
+    await criarConta(page);
+    await page.goto("/meus-treinos/criar");
+    await page.getByRole("button", { name: "Catálogo", exact: true }).click();
+    const detalhes = page.getByRole("button", { name: "Ver detalhes de Supino Reto com Barra - Pegada Média" });
+    await detalhes.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Como executar")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Recolher Supino Reto com Barra - Pegada Média" })).toHaveAttribute("aria-expanded", "true");
+
+    await page.getByRole("button", { name: "Filtros" }).click();
+    await page.getByLabel("Equipamento").selectOption("machine");
+    await expect(page.getByRole("button", { name: /^Adicionar/ }).first()).toHaveAccessibleName("Adicionar Voador (Peck Deck)");
+  });
+
+  test("fechar painéis tem área de toque de 44 px", async ({ page }) => {
+    await criarConta(page);
+    await page.getByRole("button", { name: "Ajustes" }).click();
+    const caixa = await page.getByRole("dialog").getByRole("button", { name: "Fechar" }).boundingBox();
+    expect(caixa?.width).toBeGreaterThanOrEqual(44);
+    expect(caixa?.height).toBeGreaterThanOrEqual(44);
+  });
+
+  test("mensagem de erro dá tempo de ler", async ({ page }) => {
+    await page.goto("/");
+    await page.locator("#signin-email").fill("ninguem@exemplo.com");
+    await page.locator("#signin-password").fill("senha-errada");
+    await page.getByRole("button", { name: "Entrar", exact: true }).click();
+    const erro = page.getByText("Email ou senha incorretos.");
+    await expect(erro).toBeVisible();
+    await page.waitForTimeout(5_000);
+    await expect(erro).toBeVisible();
   });
 });
 

@@ -58,7 +58,7 @@ export function DescansoBar({ descanso, onMudar }: DescansoBarProps) {
           </div>
           <div className="flex items-center gap-2 p-2">
             <div className="flex-1 min-w-0 pl-2">
-              <p className="text-[13px] text-muted-foreground">{rodando ? "Descanso" : "Pausado"}</p>
+              <p className="text-caption text-muted-foreground">{rodando ? "Descanso" : "Pausado"}</p>
               <p role="timer" className="text-2xl font-bold tabular-nums leading-tight">
                 {formatarTempo(restante)}
               </p>

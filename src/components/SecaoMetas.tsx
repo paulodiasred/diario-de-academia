@@ -8,14 +8,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CampoSelect } from "@/components/ui/campo-select";
 import { Input } from "@/components/ui/input";
 import { exerciciosTreinados } from "@/domain/estatisticas";
 import { progressoDaMeta, TIPO_META_LABEL, type TipoMeta } from "@/domain/metas";
 import type { Sessao } from "@/domain/sessao";
 import { useMetas } from "@/hooks/useMetas";
-import { toast } from "sonner";
-
-const classeSelect = "h-11 w-full rounded-md border border-input bg-secondary/30 px-3 text-sm text-foreground";
+import { toast } from "@/lib/aviso";
 
 const UNIDADE: Record<TipoMeta, string> = {
   carga: "kg",
@@ -86,7 +85,7 @@ export function SecaoMetas({ sessoes }: { sessoes: Sessao[] }) {
                 >
                   <div className="h-full rounded-full bg-primary" style={{ width: `${progresso.percentual}%` }} />
                 </div>
-                <p className="text-[13px] text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   {progresso.concluida
                     ? "Meta alcançada"
                     : `${progresso.atual.toLocaleString("pt-BR")} de ${progresso.alvo.toLocaleString("pt-BR")} ${UNIDADE[meta.tipo]}`}
@@ -107,9 +106,8 @@ export function SecaoMetas({ sessoes }: { sessoes: Sessao[] }) {
               <label htmlFor="meta-tipo" className="text-sm text-muted-foreground mb-1 block">
                 Tipo
               </label>
-              <select
+              <CampoSelect
                 id="meta-tipo"
-                className={classeSelect}
                 value={tipo}
                 onChange={(e) => setTipo(e.target.value as TipoMeta)}
               >
@@ -118,16 +116,15 @@ export function SecaoMetas({ sessoes }: { sessoes: Sessao[] }) {
                     {rotulo}
                   </option>
                 ))}
-              </select>
+              </CampoSelect>
             </div>
             {tipo === "carga" && (
               <div>
                 <label htmlFor="meta-exercicio" className="text-sm text-muted-foreground mb-1 block">
                   Exercício
                 </label>
-                <select
+                <CampoSelect
                   id="meta-exercicio"
-                  className={classeSelect}
                   value={exercicio}
                   onChange={(e) => setExercicio(e.target.value)}
                 >
@@ -137,7 +134,7 @@ export function SecaoMetas({ sessoes }: { sessoes: Sessao[] }) {
                       {e.nome}
                     </option>
                   ))}
-                </select>
+                </CampoSelect>
               </div>
             )}
             <div>

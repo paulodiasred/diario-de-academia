@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/aviso";
 import type { TreinoPersonalizado } from "@/types/catalogo";
 import * as repositorio from "@/data/repositories/treinosRepository";
 import { LimiteDoPlano } from "@/domain/planos";

@@ -59,12 +59,12 @@ export default function ComoFazerSheet({ exercicioId, nome, aberto, onFechar }: 
           {exibido ? (
             <>
               {escolhido && (
-                <p className="text-[13px] text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   Parecido com "{nome}". Confira se é o mesmo movimento antes de usar sempre.
                 </p>
               )}
               {!escolhido && !automatico && vinculado && (
-                <p className="text-[13px] text-muted-foreground">Referência que você escolheu para "{nome}".</p>
+                <p className="text-caption text-muted-foreground">Referência que você escolheu para "{nome}".</p>
               )}
               <ExercicioDetalhes exercicio={exibido} />
               {exibido.instructions.length === 0 && exibido.images.length === 0 && (
@@ -101,7 +101,7 @@ export default function ComoFazerSheet({ exercicioId, nome, aberto, onFechar }: 
                   aria-label="Buscar no catálogo"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  className="pl-9 h-11 bg-secondary/30"
+                  className="pl-9 h-11 bg-surface-2"
                 />
               </div>
               {sugestoes.length === 0 ? (

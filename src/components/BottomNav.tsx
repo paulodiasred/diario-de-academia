@@ -17,13 +17,14 @@ export function BottomNav() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-4">
-      <nav className="glass-card rounded-xl w-full max-w-md">
+      <nav aria-label="Principal" className="glass-card rounded-xl w-full max-w-[416px]">
         <div className="flex">
           {navItems.map(({ path, label, icon: Icon }) => {
             const isActive = location.pathname === path;
             return (
               <button
                 key={path}
+                aria-current={isActive ? "page" : undefined}
                 onClick={() => navigate(path)}
                 className={`flex-1 flex flex-col items-center gap-1 py-3 px-1 min-w-0 rounded-xl transition-all ${
                   isActive
@@ -32,7 +33,7 @@ export function BottomNav() {
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-[13px] font-medium">{label}</span>
+                <span className="text-caption font-medium">{label}</span>
               </button>
             );
           })}

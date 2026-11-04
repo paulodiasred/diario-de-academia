@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Play } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/aviso";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,

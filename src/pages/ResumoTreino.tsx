@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Pencil, Share2, Trash2, Trophy } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/aviso";
 import { textoParaCompartilhar } from "@/domain/exportacao";
 import { TelaCarregando } from "@/components/Estados";
 import { CorrigirTreinoSheet } from "@/components/treino/CorrigirTreinoSheet";

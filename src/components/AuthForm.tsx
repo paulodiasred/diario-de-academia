@@ -1,14 +1,53 @@
-import { useState } from 'react';
-import { Mail, Lock, UserPlus, LogIn } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Eye, EyeOff, Mail, Lock, UserPlus, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { CANCELAMENTOS_LOGIN, codigoDoErro, mensagemErroAuth } from '@/domain/errosAuth';
-import { toast } from 'sonner';
+import { toast } from '@/lib/aviso';
+
+interface CampoSenhaProps {
+  id: string;
+  valor: string;
+  novaSenha?: boolean;
+  onMudar: (valor: string) => void;
+}
+
+function CampoSenha({ id, valor, novaSenha = false, onMudar }: CampoSenhaProps) {
+  const [visivel, setVisivel] = useState(false);
+  return (
+    <div className="relative">
+      <Lock className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+      <Input
+        id={id}
+        type={visivel ? 'text' : 'password'}
+        autoComplete={novaSenha ? 'new-password' : 'current-password'}
+        placeholder="••••••••"
+        aria-describedby={novaSenha ? `${id}-regra` : undefined}
+        value={valor}
+        onChange={(e) => onMudar(e.target.value)}
+        className="pl-10 pr-11"
+        required
+      />
+      <button
+        type="button"
+        aria-label={visivel ? 'Ocultar senha' : 'Mostrar senha'}
+        onClick={() => setVisivel((v) => !v)}
+        className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-muted-foreground"
+      >
+        {visivel ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
 
 export function AuthForm() {
+  useEffect(() => {
+    document.title = 'Entrar · Diário de Academia';
+  }, []);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -99,7 +138,7 @@ export function AuthForm() {
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
           </div>
-          <div className="relative flex justify-center text-[13px] uppercase">
+          <div className="relative flex justify-center text-caption uppercase">
             <span className="bg-background px-2 text-muted-foreground">Ou</span>
           </div>
         </div>
@@ -116,10 +155,11 @@ export function AuthForm() {
             <div className="space-y-2">
               <Label htmlFor="signin-email">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="signin-email"
                   type="email"
+                  autoComplete="email"
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -131,18 +171,7 @@ export function AuthForm() {
 
             <div className="space-y-2">
               <Label htmlFor="signin-password">Senha</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="signin-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-              </div>
+              <CampoSenha id="signin-password" valor={password} onMudar={setPassword} />
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
@@ -173,10 +202,11 @@ export function AuthForm() {
             <div className="space-y-2">
               <Label htmlFor="signup-email">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="signup-email"
                   type="email"
+                  autoComplete="email"
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -188,18 +218,10 @@ export function AuthForm() {
 
             <div className="space-y-2">
               <Label htmlFor="signup-password">Senha</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="signup-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-              </div>
+              <CampoSenha id="signup-password" valor={password} novaSenha onMudar={setPassword} />
+              <p id="signup-password-regra" className="text-caption text-muted-foreground">
+                Pelo menos 6 caracteres.
+              </p>
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
@@ -213,7 +235,7 @@ export function AuthForm() {
               )}
             </Button>
 
-            <p className="text-[13px] text-center text-muted-foreground">
+            <p className="text-caption text-center text-muted-foreground">
               Ao criar uma conta, você concorda com os{" "}
               <a className="underline" href="/termos">
                 termos de uso

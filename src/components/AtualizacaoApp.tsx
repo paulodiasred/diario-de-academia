@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/aviso";
 import { registerSW } from "virtual:pwa-register";
 
 /**

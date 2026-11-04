@@ -28,7 +28,7 @@ export function CabecalhoSeries({ medida }: { medida: TipoMedida }) {
           : ["MIN", "SEG", "METROS"];
 
   return (
-    <div aria-hidden className="flex items-center gap-2 px-2 text-[11px] font-semibold tracking-wide text-muted-foreground">
+    <div aria-hidden className="flex items-center gap-2 px-2 text-micro font-semibold tracking-wide text-muted-foreground">
       <span className="w-5 shrink-0 text-center">#</span>
       <div className="flex flex-1 min-w-0 gap-2">
         {colunas.map((coluna) => (
@@ -84,7 +84,7 @@ function Campo({ rotulo, nomeAjuste, valor, passo, mostrarAjustes, feita, ultimo
         onKeyDown={avancarCampo}
         onFocus={(e) => e.target.select()}
         className={`h-12 text-center text-xl font-bold tabular-nums px-1 ${
-          feita ? "border-transparent bg-transparent" : "bg-secondary/40"
+          feita ? "border-transparent bg-transparent" : "bg-surface-2"
         }`}
       />
       {mostrarAjustes && (
@@ -206,7 +206,7 @@ export function LinhaSerie({ numero, serie, medida, anterior, proxima, onMudar, 
       </div>
 
       {anterior && proxima && !feita && (
-        <p className="pl-7 mt-1 text-[13px] text-muted-foreground">
+        <p className="pl-7 mt-1 text-caption text-muted-foreground">
           Última vez: {descreverSerie(anterior, medida)}
         </p>
       )}

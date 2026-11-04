@@ -58,10 +58,10 @@ interface GraficoProps {
 function TabelaDoGrafico({ medida, unidade, dados }: GraficoProps) {
   return (
     <details className="mt-2 text-sm">
-      <summary className="cursor-pointer py-2 text-[13px] text-muted-foreground">Ver dados</summary>
+      <summary className="cursor-pointer py-2 text-caption text-muted-foreground">Ver dados</summary>
       <table className="w-full text-left tabular-nums">
         <thead>
-          <tr className="text-[13px] text-muted-foreground">
+          <tr className="text-caption text-muted-foreground">
             <th className="py-1 font-medium">Período</th>
             <th className="py-1 font-medium text-right">{medida}</th>
           </tr>

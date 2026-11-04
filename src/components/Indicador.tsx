@@ -11,11 +11,11 @@ interface IndicadorProps {
 export function Indicador({ rotulo, valor, variacao, nota }: IndicadorProps) {
   return (
     <div className="glass-card rounded-xl p-4 min-w-0">
-      <p className="text-[13px] text-muted-foreground">{rotulo}</p>
+      <p className="text-caption text-muted-foreground">{rotulo}</p>
       <p className="text-2xl font-semibold truncate">{valor}</p>
       {variacao !== undefined && variacao !== null && (
         <p
-          className={`mt-0.5 text-[13px] flex items-center gap-0.5 ${
+          className={`mt-0.5 text-caption flex items-center gap-0.5 ${
             variacao > 0 ? "text-success" : "text-muted-foreground"
           }`}
         >
@@ -25,7 +25,7 @@ export function Indicador({ rotulo, valor, variacao, nota }: IndicadorProps) {
           {variacao}% vs. anterior
         </p>
       )}
-      {nota && <p className="mt-0.5 text-[13px] text-muted-foreground">{nota}</p>}
+      {nota && <p className="mt-0.5 text-caption text-muted-foreground">{nota}</p>}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { Reorder, useDragControls } from "framer-motion";
 import { ArrowDown, ArrowUp, ChevronDown, GripVertical, Trash2 } from "lucide-react";
 import { ImagemExercicio } from "@/components/ImagemExercicio";
 import { Badge } from "@/components/ui/badge";
+import { CampoSelect } from "@/components/ui/campo-select";
 import { Input } from "@/components/ui/input";
 import { medidaDoExercicio } from "@/domain/sessao";
 import { formatarKg, formatarTempo, juntarTempo, paraNumeroOuNulo, partesDoTempo } from "@/domain/texto";
@@ -23,12 +24,12 @@ interface ContadorProps {
 function Contador({ rotulo, valor, sufixo = "", onMudar, passo = 1, minimo = 0, maximo }: ContadorProps) {
   return (
     <div>
-      <span className="text-[13px] text-muted-foreground block mb-1">{rotulo}</span>
+      <span className="text-caption text-muted-foreground block mb-1">{rotulo}</span>
       <div className="flex items-center gap-1">
         <button
           type="button"
           aria-label={`Diminuir ${rotulo.toLowerCase()}`}
-          className="w-9 h-9 rounded-full bg-secondary/70 text-sm font-bold hover:bg-secondary"
+          className="w-9 h-9 rounded-full bg-surface-3 text-sm font-bold hover:bg-secondary"
           onClick={() => onMudar(Math.max(minimo, valor - passo))}
         >
           −
@@ -40,7 +41,7 @@ function Contador({ rotulo, valor, sufixo = "", onMudar, passo = 1, minimo = 0, 
         <button
           type="button"
           aria-label={`Aumentar ${rotulo.toLowerCase()}`}
-          className="w-9 h-9 rounded-full bg-secondary/70 text-sm font-bold hover:bg-secondary"
+          className="w-9 h-9 rounded-full bg-surface-3 text-sm font-bold hover:bg-secondary"
           onClick={() => onMudar(Math.min(maximo, valor + passo))}
         >
           +
@@ -124,7 +125,7 @@ export function ExercicioEditavel({
           <ImagemExercicio caminho={ex.images?.[0]} alt="" className="w-11 h-11 shrink-0" />
           <span className="flex-1 min-w-0">
             <span className="block font-medium text-sm leading-tight">{ex.exercicioNome}</span>
-            <span className="block mt-0.5 text-[13px] text-muted-foreground">{resumirConfiguracao(ex)}</span>
+            <span className="block mt-0.5 text-caption text-muted-foreground">{resumirConfiguracao(ex)}</span>
           </span>
           <ChevronDown
             aria-hidden
@@ -138,11 +139,11 @@ export function ExercicioEditavel({
           <div className="flex items-center gap-1">
             <div className="flex flex-1 min-w-0 flex-wrap gap-1">
               {ex.primaryMuscles.slice(0, 2).map((m) => (
-                <Badge key={m} variant="secondary" className="text-[13px] px-1.5 py-0">
+                <Badge key={m} variant="secondary" className="text-caption px-1.5 py-0">
                   {MUSCULO_LABEL[m] ?? m}
                 </Badge>
               ))}
-              <Badge variant="outline" className="text-[13px] px-1.5 py-0">
+              <Badge variant="outline" className="text-caption px-1.5 py-0">
                 {CATEGORIA_LABEL[ex.category] ?? ex.category}
               </Badge>
             </div>
@@ -199,10 +200,10 @@ export function ExercicioEditavel({
                 type="button"
                 aria-pressed={ex.descanso === segundos}
                 onClick={() => onAtualizar({ descanso: segundos })}
-                className={`h-9 flex-1 rounded-lg text-[13px] font-medium ${
+                className={`h-9 flex-1 rounded-lg text-caption font-medium ${
                   ex.descanso === segundos
                     ? "bg-primary text-primary-foreground"
-                    : "bg-secondary/70 text-foreground"
+                    : "bg-surface-3 text-foreground"
                 }`}
               >
                 {segundos}s
@@ -211,10 +212,10 @@ export function ExercicioEditavel({
           </div>
 
           <div>
-            <label className="text-[13px] text-muted-foreground block mb-1">
+            <label className="text-caption text-muted-foreground block mb-1">
               Como medir
-              <select
-                className="mt-1 h-10 w-full rounded-md border border-input bg-secondary/30 px-2 text-sm text-foreground"
+              <CampoSelect
+                className="mt-1"
                 value={medida}
                 onChange={(e) => onAtualizar({ medida: e.target.value as TipoMedida })}
               >
@@ -223,45 +224,45 @@ export function ExercicioEditavel({
                     {rotulo}
                   </option>
                 ))}
-              </select>
+              </CampoSelect>
             </label>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             {comReps && (
-              <label className="text-[13px] text-muted-foreground">
+              <label className="text-caption text-muted-foreground">
                 Repetições (meta)
                 <Input
                   type="number"
                   inputMode="numeric"
                   min={0}
-                  className="mt-1 h-10 bg-secondary/30"
+                  className="mt-1 h-10 bg-surface-2"
                   value={ex.repsAlvo ?? ""}
                   onChange={(e) => onAtualizar({ repsAlvo: paraNumeroOpcional(e.target.value) })}
                 />
               </label>
             )}
             {comReps && (
-              <label className="text-[13px] text-muted-foreground">
+              <label className="text-caption text-muted-foreground">
                 {medida === "peso_corporal" ? "Carga extra (kg)" : "Carga inicial (kg)"}
                 <Input
                   type="number"
                   inputMode="decimal"
                   min={0}
-                  className="mt-1 h-10 bg-secondary/30"
+                  className="mt-1 h-10 bg-surface-2"
                   value={ex.cargaAlvo ?? ""}
                   onChange={(e) => onAtualizar({ cargaAlvo: paraNumeroOpcional(e.target.value) })}
                 />
               </label>
             )}
             {!comReps && (
-              <label className="text-[13px] text-muted-foreground">
+              <label className="text-caption text-muted-foreground">
                 Minutos
                 <Input
                   type="number"
                   inputMode="numeric"
                   min={0}
-                  className="mt-1 h-10 bg-secondary/30"
+                  className="mt-1 h-10 bg-surface-2"
                   value={ex.duracaoAlvoSeg === undefined ? "" : partesDoTempo(ex.duracaoAlvoSeg).minutos}
                   onChange={(e) =>
                     onAtualizar({
@@ -275,13 +276,13 @@ export function ExercicioEditavel({
               </label>
             )}
             {!comReps && (
-              <label className="text-[13px] text-muted-foreground">
+              <label className="text-caption text-muted-foreground">
                 Segundos
                 <Input
                   type="number"
                   inputMode="numeric"
                   min={0}
-                  className="mt-1 h-10 bg-secondary/30"
+                  className="mt-1 h-10 bg-surface-2"
                   value={ex.duracaoAlvoSeg === undefined ? "" : partesDoTempo(ex.duracaoAlvoSeg).segundos}
                   onChange={(e) =>
                     onAtualizar({
@@ -295,13 +296,13 @@ export function ExercicioEditavel({
               </label>
             )}
             {medida === "distancia" && (
-              <label className="text-[13px] text-muted-foreground">
+              <label className="text-caption text-muted-foreground">
                 Distância (m)
                 <Input
                   type="number"
                   inputMode="decimal"
                   min={0}
-                  className="mt-1 h-10 bg-secondary/30"
+                  className="mt-1 h-10 bg-surface-2"
                   value={ex.distanciaAlvoM ?? ""}
                   onChange={(e) => onAtualizar({ distanciaAlvoM: paraNumeroOpcional(e.target.value) })}
                 />

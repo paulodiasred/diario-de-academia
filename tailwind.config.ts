@@ -14,7 +14,15 @@ export default {
       },
     },
     extend: {
+      fontSize: {
+        // Legendas e rótulos de coluna. O restante usa a escala padrão: sm, base, lg, xl e 2xl.
+        caption: ["0.8125rem", { lineHeight: "1.125rem" }],
+        micro: ["0.6875rem", { lineHeight: "1rem" }],
+      },
       colors: {
+        // Superfícies sobre o cartão: campos e controles discretos (2), e mais evidentes (3).
+        "surface-2": "hsl(var(--surface-2))",
+        "surface-3": "hsl(var(--surface-3))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

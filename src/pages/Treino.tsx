@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { CatalogoCarregando } from "@/components/CatalogoCarregando";
 import { TelaCarregando } from "@/components/Estados";
-import { toast } from "sonner";
+import { toast } from "@/lib/aviso";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -285,14 +285,14 @@ const Treino = () => {
           type="button"
           aria-label={`Ver lista de exercícios. Exercício ${indice + 1} de ${total}${seguinte ? `. Próximo: ${seguinte.nome}` : ""}`}
           onClick={() => setListaAberta(true)}
-          className="flex-1 min-w-0 h-11 rounded-md bg-secondary/60 px-2.5 flex items-center gap-2 text-left"
+          className="flex-1 min-w-0 h-11 rounded-md bg-surface-3 px-2.5 flex items-center gap-2 text-left"
         >
           <ListOrdered aria-hidden className="w-4 h-4 shrink-0 text-muted-foreground" />
           <span className="flex-1 min-w-0 leading-tight">
-            <span className="block text-[13px] font-semibold">
+            <span className="block text-caption font-semibold">
               Exercício {indice + 1} de {total}
             </span>
-            <span className="block text-[13px] text-muted-foreground truncate">
+            <span className="block text-caption text-muted-foreground truncate">
               {seguinte ? `Próximo: ${seguinte.nome}` : "Ver a lista"}
             </span>
           </span>
@@ -315,7 +315,7 @@ const Treino = () => {
           <ImagemExercicio caminho={imagemDoExercicio} alt="" className="w-11 h-11 shrink-0" />
           <div className="flex-1 min-w-0">
             <h2 className="font-bold leading-tight">{exercicio.nome}</h2>
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-caption text-muted-foreground">
               {[MUSCULO_LABEL[exercicio.primaryMuscles[0]], MEDIDA_LABEL[exercicio.medida]]
                 .filter(Boolean)
                 .join(" · ")}
@@ -393,7 +393,7 @@ const Treino = () => {
             value={exercicio.notas}
             rows={2}
             maxLength={1000}
-            className="bg-secondary/30 resize-none text-sm"
+            className="bg-surface-2 resize-none text-sm"
             onChange={(e) => {
               const notas = e.target.value;
               alterar((s) => anotarExercicio(s, indice, notas), { imediato: false });
@@ -480,7 +480,7 @@ const Treino = () => {
               </Suspense>
               <div className="space-y-2">
                 {historicoDoExercicio(sessoes, exercicio.exercicioId, exercicio.nome).map((item) => (
-                  <div key={item.sessaoId} className="rounded-lg bg-secondary/30 p-3">
+                  <div key={item.sessaoId} className="rounded-lg bg-surface-2 p-3">
                     <p className="text-sm font-semibold">
                       {new Date(item.data).toLocaleDateString("pt-BR")}
                     </p>

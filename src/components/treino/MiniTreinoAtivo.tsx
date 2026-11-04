@@ -36,7 +36,7 @@ export function MiniTreinoAtivo() {
         <Timer aria-hidden className="w-5 h-5 shrink-0" />
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-semibold truncate">Continuar {sessao.nome}</span>
-          <span className="block text-[13px] tabular-nums">{detalhe}</span>
+          <span className="block text-caption tabular-nums">{detalhe}</span>
         </span>
         <ChevronRight aria-hidden className="w-5 h-5 shrink-0" />
       </button>

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 
 // Público de propósito: é o canal para pedidos sobre dados. Para trocar sem mexer no código, defina VITE_CONTATO_EMAIL.
@@ -12,6 +12,10 @@ const Contato = () => (
 );
 
 function Pagina({ titulo, children }: { titulo: string; children: ReactNode }) {
+  useEffect(() => {
+    document.title = `${titulo} · Diário de Academia`;
+  }, [titulo]);
+
   return (
     <main className="min-h-screen p-4 pb-12 max-w-md mx-auto">
       <header className="pt-4 flex items-center gap-2">

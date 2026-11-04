@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/aviso";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Cabecalho } from "@/components/Cabecalho";
+import { EstadoVazio } from "@/components/Estados";
+import { CampoSelect } from "@/components/ui/campo-select";
 import { ImagemExercicio } from "@/components/ImagemExercicio";
 import { ExercicioDetalhes } from "@/components/ExercicioDetalhes";
 import { ExercicioProprioForm } from "@/components/ExercicioProprioForm";
@@ -55,16 +57,16 @@ const Exercicios = () => {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
+          aria-label="Buscar exercício"
           placeholder="Buscar exercício..."
           value={filtros.busca}
           onChange={(e) => setFiltros((f) => ({ ...f, busca: e.target.value }))}
-          className="pl-9 h-11 bg-secondary/30"
+          className="pl-9 h-11 bg-surface-2"
         />
       </div>
 
-      <select
+      <CampoSelect
         aria-label="Filtrar por músculo"
-        className="h-11 w-full rounded-md border border-input bg-secondary/30 px-3 text-sm"
         value={filtros.musculo}
         onChange={(e) => setFiltros((f) => ({ ...f, musculo: e.target.value }))}
       >
@@ -74,10 +76,10 @@ const Exercicios = () => {
             {MUSCULO_LABEL[m] ?? m}
           </option>
         ))}
-      </select>
+      </CampoSelect>
 
       {exerciciosFiltrados.length === 0 ? (
-        <p className="text-center text-muted-foreground py-12">Nenhum exercício encontrado.</p>
+        <EstadoVazio titulo="Nenhum exercício encontrado" descricao="Tente outra palavra, como o nome do aparelho ou do músculo." />
       ) : (
         <ul className="divide-y divide-border/60">
           {exerciciosFiltrados.slice(0, LIMITE_LISTA).map((ex) => (
@@ -90,7 +92,7 @@ const Exercicios = () => {
                 <ImagemExercicio caminho={ex.images[0]} alt="" className="w-14 h-14 shrink-0" />
                 <span className="flex-1 min-w-0">
                   <span className="block font-medium text-sm">{ex.name}</span>
-                  <span className="block text-[13px] text-muted-foreground mt-0.5">
+                  <span className="block text-caption text-muted-foreground mt-0.5">
                     {rotulosMusculos(ex.primaryMuscles)}
                   </span>
                 </span>
@@ -102,7 +104,7 @@ const Exercicios = () => {
       )}
 
       {exerciciosFiltrados.length > LIMITE_LISTA && (
-        <p className="text-center text-[13px] text-muted-foreground">
+        <p className="text-center text-caption text-muted-foreground">
           Mostrando {LIMITE_LISTA} de {total}. Refine a busca para ver mais.
         </p>
       )}
@@ -120,7 +122,7 @@ const Exercicios = () => {
               {exerciciosSemelhantes(detalhe, todos).length > 0 && (
                 <section>
                   <h3 className="font-semibold text-sm mb-1">Semelhantes</h3>
-                  <p className="text-[13px] text-muted-foreground mb-2">
+                  <p className="text-caption text-muted-foreground mb-2">
                     Mesmo músculo principal e equipamento.
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -129,7 +131,7 @@ const Exercicios = () => {
                         key={ex.id}
                         type="button"
                         onClick={() => setDetalhe(ex)}
-                        className="px-2.5 py-1.5 rounded-lg text-[13px] bg-secondary/50"
+                        className="px-2.5 py-1.5 rounded-lg text-caption bg-surface-2"
                       >
                         {ex.name}
                       </button>

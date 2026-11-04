@@ -1,11 +1,10 @@
 import { Suspense, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { TelaCarregando } from "@/components/Estados";
+import { Cabecalho } from "@/components/Cabecalho";
+import { EstadoVazio, TelaCarregando } from "@/components/Estados";
 import { ErrorState } from "@/components/ErrorState";
 import { GraficoLinha } from "@/components/graficos";
 import { Indicador } from "@/components/Indicador";
-import { Button } from "@/components/ui/button";
 import { exerciciosTreinados, recordesBatidos } from "@/domain/estatisticas";
 import { descreverSerie, historicoDoExercicio, pontosEvolucao } from "@/domain/sessao";
 import { formatarKg } from "@/domain/texto";
@@ -48,17 +47,16 @@ const EvolucaoExercicio = () => {
 
   if (loading) return <TelaCarregando />;
 
-  const voltar = (
-    <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate("/evolucao")}>
-      <ArrowLeft className="w-5 h-5" />
-    </Button>
-  );
+  const voltar = () => navigate("/evolucao");
 
   if (!dados) {
     return (
       <div className="min-h-screen p-4 max-w-md mx-auto space-y-4">
-        <div className="pt-4">{voltar}</div>
-        <p className="text-center text-muted-foreground">Sem registros deste exercício.</p>
+        <Cabecalho titulo={nome} onVoltar={voltar} />
+        <EstadoVazio
+          titulo="Sem registros deste exercício"
+          descricao="Ele aparece aqui depois do primeiro treino finalizado."
+        />
       </div>
     );
   }
@@ -67,10 +65,7 @@ const EvolucaoExercicio = () => {
 
   return (
     <div className="min-h-screen p-4 pb-8 max-w-md mx-auto space-y-5">
-      <header className="pt-4 flex items-center gap-2">
-        {voltar}
-        <h1 className="text-xl font-bold min-w-0">{nome}</h1>
-      </header>
+<Cabecalho titulo={nome} onVoltar={voltar} />
 
       <div className="grid grid-cols-2 gap-3">
         <Indicador
@@ -101,7 +96,7 @@ const EvolucaoExercicio = () => {
       <section aria-label="Histórico do exercício" className="space-y-2">
         <h2 className="font-semibold">Histórico</h2>
         {!premium && resumo.vezes > historico.length && (
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             Mostrando os últimos {historico.length} de {resumo.vezes} treinos. O histórico completo é do Premium.
           </p>
         )}

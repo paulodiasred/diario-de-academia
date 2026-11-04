@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ChevronDown } from "lucide-react";
-import { toast } from "sonner";
+import { ChevronDown } from "lucide-react";
+import { toast } from "@/lib/aviso";
+import { Cabecalho } from "@/components/Cabecalho";
 import { Button } from "@/components/ui/button";
 import { LIMITES_GRATUITO } from "@/domain/planos";
 import { MODELOS_TREINO, montarTreinosDoModelo, nomesDaFicha, type ModeloTreino } from "@/domain/modelosTreino";
@@ -40,15 +41,11 @@ const Modelos = () => {
 
   return (
     <div className="min-h-screen p-4 pb-8 max-w-md mx-auto space-y-5">
-      <header className="pt-4 flex items-center gap-2">
-        <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold">Modelos de treino</h1>
-          <p className="text-sm text-muted-foreground">Um ponto de partida. Depois, é só ajustar.</p>
-        </div>
-      </header>
+      <Cabecalho
+        titulo="Modelos de treino"
+        subtitulo="Um ponto de partida. Depois, é só ajustar."
+        onVoltar={() => navigate(-1)}
+      />
 
       <ul className="space-y-3">
         {MODELOS_TREINO.map((modelo) => {
@@ -65,7 +62,7 @@ const Modelos = () => {
               >
                 <span className="flex-1 min-w-0">
                   <span className="block font-semibold">{modelo.nome}</span>
-                  <span className="block text-[13px] text-muted-foreground">
+                  <span className="block text-caption text-muted-foreground">
                     {modelo.frequencia} · {plural(fichas, "ficha", "fichas")}
                   </span>
                   <span className="block mt-1 text-sm text-muted-foreground">{modelo.descricao}</span>
@@ -81,7 +78,7 @@ const Modelos = () => {
                   {modelo.fichas.map((ficha) => (
                     <section key={ficha.nome} aria-label={ficha.nome}>
                       <h2 className="font-semibold text-sm">{ficha.nome}</h2>
-                      <p className="text-[13px] text-muted-foreground mb-1">{ficha.dias.join(", ")}</p>
+                      <p className="text-caption text-muted-foreground mb-1">{ficha.dias.join(", ")}</p>
                       <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-0.5">
                         {nomesDaFicha(ficha, catalogo).map((nome) => (
                           <li key={nome}>{nome}</li>

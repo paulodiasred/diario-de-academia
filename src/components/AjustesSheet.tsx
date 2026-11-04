@@ -9,7 +9,7 @@ import { useInstalarApp } from "@/hooks/useInstalarApp";
 import { usePerfil } from "@/hooks/usePerfil";
 import { avisoLigado, avisoSuportado, desligarAviso, ligarAviso } from "@/lib/avisoDescanso";
 import { definirSom, prepararSom, somLigado, somSuportado, tocarSomDescanso } from "@/lib/somDescanso";
-import { toast } from "sonner";
+import { toast } from "@/lib/aviso";
 
 const TEMAS = [
   { valor: "dark", rotulo: "Escuro" },
@@ -21,7 +21,7 @@ const classeOpcao = (ativa: boolean) =>
   `h-11 rounded-lg text-sm font-medium border transition-colors ${
     ativa
       ? "bg-primary text-primary-foreground border-primary"
-      : "bg-secondary/40 text-foreground border-transparent"
+      : "bg-surface-2 text-foreground border-transparent"
   }`;
 
 interface AjustesSheetProps {
@@ -95,7 +95,7 @@ export function AjustesSheet({ aberto, onFechar }: AjustesSheetProps) {
             <div className="flex items-center justify-between gap-3">
               <label htmlFor="som-descanso" className="text-sm font-medium">
                 Som no fim do descanso
-                <span className="block text-[13px] font-normal text-muted-foreground">
+                <span className="block text-caption font-normal text-muted-foreground">
                   Com o app na tela. No iPhone, o modo silencioso desliga o som.
                 </span>
               </label>
@@ -119,7 +119,7 @@ export function AjustesSheet({ aberto, onFechar }: AjustesSheetProps) {
             <div className="flex items-center justify-between gap-3">
               <label htmlFor="avisar-descanso" className="text-sm font-medium">
                 Avisar o fim do descanso
-                <span className="block text-[13px] font-normal text-muted-foreground">
+                <span className="block text-caption font-normal text-muted-foreground">
                   Com o app aberto em segundo plano. O sistema pode suspender o app e impedir o aviso.
                 </span>
               </label>
@@ -133,7 +133,7 @@ export function AjustesSheet({ aberto, onFechar }: AjustesSheetProps) {
             </Button>
           )}
           {mostrarDicaIos && (
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-caption text-muted-foreground">
               Para instalar no iPhone: no Safari, toque em Compartilhar e em Adicionar à Tela de Início.
             </p>
           )}

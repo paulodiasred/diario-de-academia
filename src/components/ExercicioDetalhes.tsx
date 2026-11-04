@@ -17,7 +17,7 @@ export function ExercicioDetalhes({ exercicio }: { exercicio: ExercicioCatalogo 
                 alt={`${exercicio.name}, ${i === 0 ? "início" : "fim"} do movimento`}
                 className="w-full aspect-square"
               />
-              <figcaption className="mt-1 text-center text-[13px] text-muted-foreground">
+              <figcaption className="mt-1 text-center text-caption text-muted-foreground">
                 {i === 0 ? "Início" : "Fim"}
               </figcaption>
             </figure>

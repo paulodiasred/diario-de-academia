@@ -20,6 +20,9 @@
     --secondary: 240 5% 91%;
     --secondary-foreground: 240 10% 10%;
 
+    --surface-2: 240 5% 97%;
+    --surface-3: 240 5% 94%;
+
     --muted: 240 5% 91%;
     --muted-foreground: 240 4% 38%;
 
@@ -64,6 +67,9 @@
     --secondary: 240 4% 18%;
     --secondary-foreground: 60 5% 96%;
 
+    --surface-2: 240 4% 14%;
+    --surface-3: 240 4% 16%;
+
     --muted: 240 4% 18%;
     --muted-foreground: 240 5% 68%;
 
@@ -103,6 +109,15 @@
   button,
   a {
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* O mesmo anel de foco em todo o app, inclusive em botões que não usam o componente Button. */
+  button:focus-visible,
+  a:focus-visible,
+  select:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
 
   @media (prefers-reduced-motion: reduce) {

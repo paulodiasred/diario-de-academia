@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/aviso";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -22,7 +22,7 @@ interface CampoCorrecaoProps {
 
 function CampoCorrecao({ rotulo, valor, invalido = false, onMudar }: CampoCorrecaoProps) {
   return (
-    <label className="flex-1 min-w-0 text-[13px] text-muted-foreground">
+    <label className="flex-1 min-w-0 text-caption text-muted-foreground">
       {rotulo}
       <Input
         type="number"

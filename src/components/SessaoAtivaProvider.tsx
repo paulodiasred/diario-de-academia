@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/aviso";
 import { SessaoAtivaContext } from "@/contexts/SessaoAtivaContext";
 import {
   escolherRascunho,

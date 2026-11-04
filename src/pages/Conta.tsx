@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ChevronRight, Download, Lock, LogOut, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { ChevronRight, Download, Lock, LogOut, Trash2 } from "lucide-react";
+import { toast } from "@/lib/aviso";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Cabecalho } from "@/components/Cabecalho";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { montarExportacaoCompleta } from "@/data/repositories/contaRepository";
@@ -101,15 +102,7 @@ const Conta = () => {
 
   return (
     <div className="min-h-screen p-4 pb-8 max-w-md mx-auto space-y-5">
-      <header className="pt-4 flex items-center gap-2">
-        <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => navigate("/")}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold">Minha conta</h1>
-          <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
-        </div>
-      </header>
+      <Cabecalho titulo="Minha conta" subtitulo={user?.email ?? undefined} onVoltar={() => navigate("/")} />
 
       {usaSenha && !user?.emailVerified && (
         <section aria-label="Confirmar email" className="glass-card rounded-xl p-4 space-y-2">
@@ -252,6 +245,7 @@ const Conta = () => {
             {usaSenha && (
               <Input
                 type="password"
+                autoComplete="current-password"
                 aria-label="Sua senha"
                 placeholder="Sua senha"
                 value={senha}

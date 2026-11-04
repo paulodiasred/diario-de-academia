@@ -6,11 +6,13 @@ import {
   Copy,
   Pencil,
 } from "lucide-react";
-import { TelaCarregando } from "@/components/Estados";
+import { EstadoVazio, TelaCarregando } from "@/components/Estados";
 import { Cabecalho } from "@/components/Cabecalho";
 import { BotaoIniciarTreino } from "@/components/treino/BotaoIniciarTreino";
 import type { TreinoPersonalizado } from "@/types/catalogo";
 import { Button } from "@/components/ui/button";
+import { CampoSelect } from "@/components/ui/campo-select";
+import { Chip } from "@/components/ui/chip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,8 +27,8 @@ import { ErrorState } from "@/components/ErrorState";
 import { LIMITES_GRATUITO, LimiteDoPlano } from "@/domain/planos";
 import { useMeusTreinos } from "@/hooks/useMeusTreinos";
 import { usePlano } from "@/hooks/usePlano";
-import { MUSCULO_LABEL, CATEGORIA_LABEL, DIAS_SEMANA } from "@/types/catalogo";
-import { toast } from "sonner";
+import { MUSCULO_LABEL, DIAS_SEMANA } from "@/types/catalogo";
+import { toast } from "@/lib/aviso";
 
 const MeusTreinos = () => {
   const navigate = useNavigate();
@@ -136,7 +138,7 @@ const MeusTreinos = () => {
           </Button>
 
           {!plano.premium && !plano.carregando && (
-            <p className="text-[13px] text-muted-foreground -mt-2">
+            <p className="text-caption text-muted-foreground -mt-2">
               {plano.podeCriar("treinos")
                 ? `${plano.uso.treinos} de ${LIMITES_GRATUITO.treinos} treinos do plano gratuito`
                 : `Você usou os ${LIMITES_GRATUITO.treinos} treinos do plano gratuito. Exclua um ou conheça o Premium.`}
@@ -144,9 +146,8 @@ const MeusTreinos = () => {
           )}
 
           {musculosDisponiveis.length > 1 && (
-            <select
+            <CampoSelect
               aria-label="Filtrar por grupo muscular"
-              className="h-11 w-full rounded-md border border-input bg-secondary/30 px-3 text-sm"
               value={musculo}
               onChange={(e) => setMusculo(e.target.value)}
             >
@@ -156,20 +157,16 @@ const MeusTreinos = () => {
                   {MUSCULO_LABEL[m] ?? m}
                 </option>
               ))}
-            </select>
+            </CampoSelect>
           )}
 
           {/* Lista de treinos */}
           <>
             {todosTreinos.length === 0 ? (
-              <div className="text-center py-16 space-y-3">
-                <p className="text-muted-foreground">
-                  Você ainda não tem treinos salvos.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Crie seu primeiro treino personalizado!
-                </p>
-              </div>
+              <EstadoVazio
+                titulo="Você ainda não tem treinos salvos"
+                descricao="Comece com um modelo pronto ou crie o seu."
+              />
             ) : (
               <div className="space-y-3">
                 {treinos.map((treino) => {
@@ -179,60 +176,34 @@ const MeusTreinos = () => {
                     ),
                   ].slice(0, 3);
 
-                  const categorias = [
-                    ...new Set(treino.exercicios.map((e) => e.category)),
-                  ];
-
                   return (
                     <div key={treino.id} className="glass-card rounded-xl p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-foreground truncate">
+                          <h2 className="font-semibold text-foreground truncate">
                             {treino.nome}
-                          </h3>
+                          </h2>
                           {treino.descricao && (
                             <p className="text-sm text-muted-foreground truncate mt-0.5">
                               {treino.descricao}
                             </p>
                           )}
-                          <p className="text-[13px] text-muted-foreground mt-1">
+                          <p className="text-caption text-muted-foreground mt-1">
                             {treino.exercicios.length} exercício
                             {treino.exercicios.length !== 1 ? "s" : ""}
                           </p>
                         </div>
                       </div>
 
-                      {/* Dias, músculos e categorias na mesma linha */}
+                      {/* O dia é o que importa na hora de escolher: só ele tem destaque. */}
                       <div className="flex flex-wrap gap-1">
-                        {treino.dias && treino.dias.length > 0 && (
-                          <>
-                          {DIAS_SEMANA.filter((d) =>
-                            treino.dias.includes(d)
-                          ).map((dia) => (
-                            <span
-                              key={dia}
-                              className="text-[13px] px-2 py-0.5 bg-primary/15 text-primary rounded-full font-medium"
-                            >
-                              {dia}
-                            </span>
-                          ))}
-                          </>
-                        )}
-                        {musculos.map((m) => (
-                          <span
-                            key={m}
-                            className="text-[13px] px-2 py-0.5 bg-primary/10 text-primary rounded-full"
-                          >
-                            {MUSCULO_LABEL[m] ?? m}
-                          </span>
+                        {DIAS_SEMANA.filter((d) => treino.dias?.includes(d)).map((dia) => (
+                          <Chip key={dia} variante="destaque">
+                            {dia}
+                          </Chip>
                         ))}
-                        {categorias.map((c) => (
-                          <span
-                            key={c}
-                            className="text-[13px] px-2 py-0.5 bg-secondary/50 text-muted-foreground rounded-full"
-                          >
-                            {CATEGORIA_LABEL[c] ?? c}
-                          </span>
+                        {musculos.map((m) => (
+                          <Chip key={m}>{MUSCULO_LABEL[m] ?? m}</Chip>
                         ))}
                       </div>
 

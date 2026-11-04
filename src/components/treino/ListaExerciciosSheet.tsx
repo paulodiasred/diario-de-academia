@@ -50,7 +50,7 @@ export function ListaExerciciosSheet({
                 >
                   <span
                     aria-hidden
-                    className={`h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-[13px] font-semibold ${
+                    className={`h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-caption font-semibold ${
                       atual
                         ? "bg-foreground text-background"
                         : completo
@@ -62,7 +62,7 @@ export function ListaExerciciosSheet({
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-medium">{e.nome}</span>
-                    <span className="block text-[13px] text-muted-foreground">
+                    <span className="block text-caption text-muted-foreground">
                       {feitas} de {e.series.length} séries
                     </span>
                   </span>

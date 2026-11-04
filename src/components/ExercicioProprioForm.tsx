@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { toast } from "sonner";
+import { toast } from "@/lib/aviso";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CampoSelect } from "@/components/ui/campo-select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { LimiteDoPlano } from "@/domain/planos";
@@ -27,9 +28,6 @@ interface ExercicioProprioFormProps {
   onFechar: () => void;
   onSalvo?: (exercicio: ExercicioCatalogo) => void;
 }
-
-const classeSelect =
-  "h-11 w-full rounded-md border border-input bg-secondary/30 px-3 text-sm text-foreground";
 
 export function ExercicioProprioForm({ aberto, exercicio, onFechar, onSalvo }: ExercicioProprioFormProps) {
   const { salvar } = useExerciciosProprios();
@@ -100,9 +98,8 @@ export function ExercicioProprioForm({ aberto, exercicio, onFechar, onSalvo }: E
             <label htmlFor="exercicio-musculo" className="text-sm text-muted-foreground mb-1 block">
               Músculo principal
             </label>
-            <select
+            <CampoSelect
               id="exercicio-musculo"
-              className={classeSelect}
               value={musculo}
               onChange={(e) => setMusculo(e.target.value)}
             >
@@ -112,7 +109,7 @@ export function ExercicioProprioForm({ aberto, exercicio, onFechar, onSalvo }: E
                   {rotulo}
                 </option>
               ))}
-            </select>
+            </CampoSelect>
           </div>
 
           <fieldset>
@@ -132,10 +129,10 @@ export function ExercicioProprioForm({ aberto, exercicio, onFechar, onSalvo }: E
                           marcado ? atual.filter((m) => m !== valor) : [...atual, valor],
                         )
                       }
-                      className={`px-2.5 py-1.5 rounded-lg text-[13px] border ${
+                      className={`px-2.5 py-1.5 rounded-lg text-caption border ${
                         marcado
                           ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-secondary/30 text-muted-foreground"
+                          : "bg-surface-2 text-muted-foreground"
                       }`}
                     >
                       {rotulo}
@@ -149,9 +146,8 @@ export function ExercicioProprioForm({ aberto, exercicio, onFechar, onSalvo }: E
             <label htmlFor="exercicio-equipamento" className="text-sm text-muted-foreground mb-1 block">
               Equipamento
             </label>
-            <select
+            <CampoSelect
               id="exercicio-equipamento"
-              className={classeSelect}
               value={equipamento}
               onChange={(e) => setEquipamento(e.target.value)}
             >
@@ -161,16 +157,15 @@ export function ExercicioProprioForm({ aberto, exercicio, onFechar, onSalvo }: E
                   {rotulo}
                 </option>
               ))}
-            </select>
+            </CampoSelect>
           </div>
 
           <div>
             <label htmlFor="exercicio-medida" className="text-sm text-muted-foreground mb-1 block">
               Como medir
             </label>
-            <select
+            <CampoSelect
               id="exercicio-medida"
-              className={classeSelect}
               value={medida}
               onChange={(e) => setMedida(e.target.value as TipoMedida)}
             >
@@ -179,7 +174,7 @@ export function ExercicioProprioForm({ aberto, exercicio, onFechar, onSalvo }: E
                   {rotulo}
                 </option>
               ))}
-            </select>
+            </CampoSelect>
           </div>
 
           <div>

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/aviso";
 import { criarMeta, excluirMeta, listarMetas } from "@/data/repositories/metasRepository";
 import type { Meta } from "@/domain/metas";
 import { useAuth } from "./useAuth";

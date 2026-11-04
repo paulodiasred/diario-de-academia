@@ -1,4 +1,4 @@
-import { lazy, Suspense, useLayoutEffect } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigationType } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { TelaCarregando } from "@/components/Estados";
@@ -8,7 +8,7 @@ import { MiniTreinoAtivo } from "@/components/treino/MiniTreinoAtivo";
 import { useAuth } from "@/hooks/useAuth";
 import { useMigracaoLegado } from "@/hooks/useMigracaoLegado";
 import { useSessaoAtiva } from "@/hooks/useSessaoAtiva";
-import { mostraTreinoAtivo } from "@/lib/navegacao";
+import { mostraTreinoAtivo, nomeDaTela, tituloDaPagina } from "@/lib/navegacao";
 
 const Index = lazy(() => import("./pages/Index"));
 const MeusTreinos = lazy(() => import("./pages/MeusTreinos"));
@@ -36,6 +36,28 @@ function RolarAoTopo() {
   return null;
 }
 
+/** Cada tela tem título próprio. Ao navegar, o foco vai para o conteúdo novo e o nome é anunciado. */
+function AnuncioDeTela({ conteudo }: { conteudo: RefObject<HTMLElement> }) {
+  const { pathname } = useLocation();
+  const nome = nomeDaTela(pathname);
+  const primeira = useRef(true);
+
+  useEffect(() => {
+    document.title = tituloDaPagina(nome);
+    if (primeira.current) {
+      primeira.current = false;
+      return;
+    }
+    conteudo.current?.focus({ preventScroll: true });
+  }, [pathname, nome, conteudo]);
+
+  return (
+    <p role="status" className="sr-only">
+      {nome}
+    </p>
+  );
+}
+
 /** Reserva o espaço da barra do treino ativo: o fim das telas não fica atrás dela. */
 function EspacoTreinoAtivo() {
   const { pathname } = useLocation();
@@ -46,11 +68,13 @@ function EspacoTreinoAtivo() {
 function Conteudo() {
   const { user, novoCadastro } = useAuth();
   useMigracaoLegado(user?.uid);
+  const conteudo = useRef<HTMLElement>(null);
 
   return (
     <BrowserRouter>
       <RolarAoTopo />
-      <main>
+      <AnuncioDeTela conteudo={conteudo} />
+      <main ref={conteudo} tabIndex={-1} className="outline-none">
         <Suspense fallback={<TelaCarregando />}>
           {novoCadastro ? (
             <Onboarding />

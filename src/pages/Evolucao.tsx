@@ -138,7 +138,7 @@ const Evolucao = () => {
               className={`h-11 rounded-lg text-sm font-medium transition-colors ${
                 dias === p.dias
                   ? "bg-primary text-primary-foreground"
-                  : "bg-secondary/60 text-foreground"
+                  : "bg-surface-3 text-foreground"
               }`}
             >
               <span className="inline-flex items-center gap-1">
@@ -174,7 +174,7 @@ const Evolucao = () => {
         </div>
 
         {(atual.seriesSemReps > 0 || atual.sessoesSemTempo > 0) && (
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             Registros antigos não têm repetições nem duração.
             {atual.seriesSemReps > 0 &&
               ` ${atual.seriesSemReps} série${atual.seriesSemReps !== 1 ? "s" : ""} fora do volume.`}
@@ -232,7 +232,7 @@ const Evolucao = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 text-center text-[13px] text-muted-foreground" aria-hidden>
+        <div className="grid grid-cols-7 gap-1 text-center text-caption text-muted-foreground" aria-hidden>
           {DIAS_CABECALHO.map((d, i) => (
             <span key={i}>{d}</span>
           ))}
@@ -259,6 +259,7 @@ const Evolucao = () => {
             ) : (
               <span
                 key={dia.chave}
+                role="img"
                 aria-label={descricao}
                 className="aspect-square rounded-lg flex items-center justify-center text-sm text-muted-foreground"
               >
@@ -267,7 +268,7 @@ const Evolucao = () => {
             );
           })}
         </div>
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           {treinosNoMes} treino{treinosNoMes !== 1 ? "s" : ""} neste mês
         </p>
       </section>
@@ -282,7 +283,7 @@ const Evolucao = () => {
             <div key={`${r.nome}-${r.data}`} className="flex justify-between gap-3 text-sm">
               <span className="min-w-0">
                 <span className="block truncate">{r.nome}</span>
-                <span className="block text-[13px] text-muted-foreground">
+                <span className="block text-caption text-muted-foreground">
                   {new Date(r.data).toLocaleDateString("pt-BR")} · antes {formatarKg(r.anterior)}
                 </span>
               </span>
@@ -311,7 +312,7 @@ const Evolucao = () => {
               placeholder="Buscar exercício..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="pl-9 h-11 bg-secondary/30"
+              className="pl-9 h-11 bg-surface-2"
             />
           </div>
         )}
@@ -325,7 +326,7 @@ const Evolucao = () => {
               >
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-medium truncate">{e.nome}</span>
-                  <span className="block text-[13px] text-muted-foreground">
+                  <span className="block text-caption text-muted-foreground">
                     {e.vezes} vez{e.vezes !== 1 ? "es" : ""}
                     {e.melhorPeso !== null && ` · melhor carga ${formatarKg(e.melhorPeso)}`}
                   </span>
@@ -357,7 +358,7 @@ const Evolucao = () => {
                 >
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-medium truncate">{s.nome}</span>
-                    <span className="block text-[13px] text-muted-foreground">
+                    <span className="block text-caption text-muted-foreground">
                       {new Date(s.iniciadaEm).toLocaleDateString("pt-BR")} · {resumo.series} série
                       {resumo.series !== 1 ? "s" : ""}
                       {resumo.volumeKg > 0 && ` · ${formatarKg(resumo.volumeKg)}`}

@@ -67,11 +67,12 @@ const Index = () => {
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
   // Sem nome no cadastro, cumprimenta sem nome: o email não é um nome.
   const primeiroNome = user?.displayName?.split(" ")[0];
-  const hojeExtenso = new Date().toLocaleDateString("pt-BR", {
+  const dataExtensa = new Date().toLocaleDateString("pt-BR", {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
+  const hojeExtenso = dataExtensa.charAt(0).toUpperCase() + dataExtensa.slice(1);
   const ultimo = sessoes.find((s) => s.finalizadaEm);
   const { naSemana, sequencia, mes, proximo, recordes, volume } = painel;
   const progressoMeta = metaSemanal ? Math.min(100, (naSemana / metaSemanal) * 100) : 0;
@@ -110,7 +111,7 @@ const Index = () => {
       {proximo && (
         <section aria-label="Próximo treino" className="glass-card rounded-xl p-4 flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-caption text-muted-foreground">
               Próximo treino · {quandoEm(proximo.emDias, proximo.dia)}
             </p>
             <h2 className="font-semibold truncate">{proximo.treino.nome}</h2>

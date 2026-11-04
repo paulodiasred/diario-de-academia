@@ -12,13 +12,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { CampoSelect } from "@/components/ui/campo-select";
+import { ChipFiltro } from "@/components/ui/chip";
 import { GRUPOS_MUSCULARES } from "@/domain/catalogo";
 import { useCatalogoExercicios } from "@/hooks/useCatalogoExercicios";
 import type { ExercicioCatalogo } from "@/types/catalogo";
@@ -91,7 +86,7 @@ export function CatalogoDrawer({
               onChange={(e) =>
                 setFiltros((f) => ({ ...f, busca: e.target.value }))
               }
-              className="pl-9 bg-secondary/30"
+              className="pl-9 bg-surface-2"
             />
             {filtros.busca && (
               <button
@@ -109,19 +104,13 @@ export function CatalogoDrawer({
             {GRUPOS_MUSCULARES.map((grupo) => {
               const ativo = filtros.grupo === grupo.id;
               return (
-                <button
+                <ChipFiltro
                   key={grupo.id}
-                  type="button"
-                  aria-pressed={ativo}
+                  ativo={ativo}
                   onClick={() => setFiltros((f) => ({ ...f, grupo: ativo ? "" : grupo.id }))}
-                  className={`h-9 shrink-0 rounded-lg px-3 text-[13px] font-medium border ${
-                    ativo
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-secondary/30 text-foreground border-transparent"
-                  }`}
                 >
                   {grupo.rotulo}
-                </button>
+                </ChipFiltro>
               );
             })}
           </div>
@@ -130,7 +119,7 @@ export function CatalogoDrawer({
             <Button
               variant="outline"
               size="sm"
-              className="text-[13px] h-9 gap-1"
+              className="text-caption h-9 gap-1"
               onClick={() => setCriando(true)}
             >
               <Plus className="w-3 h-3" />
@@ -139,7 +128,7 @@ export function CatalogoDrawer({
             <Button
               variant="outline"
               size="sm"
-              className="text-[13px] h-9 gap-1"
+              className="text-caption h-9 gap-1"
               onClick={() => setMostrarFiltros((v) => !v)}
             >
               <ChevronDown
@@ -154,7 +143,7 @@ export function CatalogoDrawer({
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-[13px] h-8 text-muted-foreground"
+                className="text-caption h-8 text-muted-foreground"
                 onClick={limparFiltros}
               >
                 Limpar
@@ -171,93 +160,57 @@ export function CatalogoDrawer({
                 className="overflow-hidden"
               >
                 <div className="grid grid-cols-2 gap-2 pt-1">
-                  <Select
-                    value={filtros.categoria || "all"}
-                    onValueChange={(v) =>
-                      setFiltros((f) => ({
-                        ...f,
-                        categoria: v === "all" ? "" : v,
-                      }))
-                    }
+                  <CampoSelect
+                    aria-label="Categoria"
+                    value={filtros.categoria}
+                    onChange={(e) => setFiltros((f) => ({ ...f, categoria: e.target.value }))}
                   >
-                    <SelectTrigger className="h-8 text-[13px] bg-secondary/30">
-                      <SelectValue placeholder="Categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas categorias</SelectItem>
-                      {categorias.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {CATEGORIA_LABEL[c] ?? c}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <option value="">Categorias</option>
+                    {categorias.map((c) => (
+                      <option key={c} value={c}>
+                        {CATEGORIA_LABEL[c] ?? c}
+                      </option>
+                    ))}
+                  </CampoSelect>
 
-                  <Select
-                    value={filtros.musculo || "all"}
-                    onValueChange={(v) =>
-                      setFiltros((f) => ({
-                        ...f,
-                        musculo: v === "all" ? "" : v,
-                      }))
-                    }
+                  <CampoSelect
+                    aria-label="Músculo"
+                    value={filtros.musculo}
+                    onChange={(e) => setFiltros((f) => ({ ...f, musculo: e.target.value }))}
                   >
-                    <SelectTrigger className="h-8 text-[13px] bg-secondary/30">
-                      <SelectValue placeholder="Músculo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos músculos</SelectItem>
-                      {musculos.map((m) => (
-                        <SelectItem key={m} value={m}>
-                          {MUSCULO_LABEL[m] ?? m}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <option value="">Músculos</option>
+                    {musculos.map((m) => (
+                      <option key={m} value={m}>
+                        {MUSCULO_LABEL[m] ?? m}
+                      </option>
+                    ))}
+                  </CampoSelect>
 
-                  <Select
-                    value={filtros.nivel || "all"}
-                    onValueChange={(v) =>
-                      setFiltros((f) => ({
-                        ...f,
-                        nivel: v === "all" ? "" : v,
-                      }))
-                    }
+                  <CampoSelect
+                    aria-label="Nível"
+                    value={filtros.nivel}
+                    onChange={(e) => setFiltros((f) => ({ ...f, nivel: e.target.value }))}
                   >
-                    <SelectTrigger className="h-8 text-[13px] bg-secondary/30">
-                      <SelectValue placeholder="Nível" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos níveis</SelectItem>
-                      {niveis.map((n) => (
-                        <SelectItem key={n} value={n}>
-                          {NIVEL_LABEL[n] ?? n}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <option value="">Níveis</option>
+                    {niveis.map((n) => (
+                      <option key={n} value={n}>
+                        {NIVEL_LABEL[n] ?? n}
+                      </option>
+                    ))}
+                  </CampoSelect>
 
-                  <Select
-                    value={filtros.equipamento || "all"}
-                    onValueChange={(v) =>
-                      setFiltros((f) => ({
-                        ...f,
-                        equipamento: v === "all" ? "" : v,
-                      }))
-                    }
+                  <CampoSelect
+                    aria-label="Equipamento"
+                    value={filtros.equipamento}
+                    onChange={(e) => setFiltros((f) => ({ ...f, equipamento: e.target.value }))}
                   >
-                    <SelectTrigger className="h-8 text-[13px] bg-secondary/30">
-                      <SelectValue placeholder="Equipamento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos equipamentos</SelectItem>
-                      {equipamentos.map((eq) => (
-                        <SelectItem key={eq} value={eq}>
-                          {EQUIPAMENTO_LABEL[eq] ?? eq}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <option value="">Equipamentos</option>
+                    {equipamentos.map((eq) => (
+                      <option key={eq} value={eq}>
+                        {EQUIPAMENTO_LABEL[eq] ?? eq}
+                      </option>
+                    ))}
+                  </CampoSelect>
                 </div>
               </motion.div>
             )}
@@ -289,37 +242,39 @@ export function CatalogoDrawer({
                     key={ex.id}
                     className="border-b border-border/60 last:border-0"
                   >
-                    <div
-                      className="py-3 flex items-center gap-3"
-                      onClick={() =>
-                        setExpandido(aberto ? null : ex.id)
-                      }
-                    >
-                      {/* Thumbnail */}
-                      <ImagemExercicio caminho={ex.images?.[0]} alt="" className="w-14 h-14 shrink-0" />
+                    <div className="py-3 flex items-center gap-3">
+                      <button
+                        type="button"
+                        aria-expanded={aberto}
+                        aria-label={`${aberto ? "Recolher" : "Ver detalhes de"} ${ex.name}`}
+                        onClick={() => setExpandido(aberto ? null : ex.id)}
+                        className="flex-1 min-w-0 flex items-center gap-3 text-left"
+                      >
+                        {/* Thumbnail */}
+                        <ImagemExercicio caminho={ex.images?.[0]} alt="" className="w-14 h-14 shrink-0" />
 
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm leading-tight">
-                          {ex.name}
-                        </p>
-                        <p className="mt-0.5 text-[13px] text-muted-foreground">
-                          {[
-                            ex.proprio ? "Seu" : null,
-                            ...ex.primaryMuscles.slice(0, 2).map((m) => MUSCULO_LABEL[m] ?? m),
-                            ex.proprio ? null : (NIVEL_LABEL[ex.level] ?? ex.level),
-                            ex.equipment ? (EQUIPAMENTO_LABEL[ex.equipment] ?? ex.equipment) : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </p>
-                      </div>
+                        <span className="flex-1 min-w-0">
+                          <span className="block font-medium text-sm leading-tight">
+                            {ex.name}
+                          </span>
+                          <span className="block mt-0.5 text-caption text-muted-foreground">
+                            {[
+                              ex.proprio ? "Seu" : null,
+                              ...ex.primaryMuscles.slice(0, 2).map((m) => MUSCULO_LABEL[m] ?? m),
+                              ex.proprio ? null : (NIVEL_LABEL[ex.level] ?? ex.level),
+                              ex.equipment ? (EQUIPAMENTO_LABEL[ex.equipment] ?? ex.equipment) : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        </span>
+                      </button>
                       <Button
                         size="sm"
                         variant="secondary"
                         className="shrink-0 h-11 w-11 p-0"
                         aria-label={`Adicionar ${ex.name}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={() => {
                           if (!jaAdicionado) onAdicionar(ex);
                         }}
                         disabled={jaAdicionado}
@@ -351,12 +306,12 @@ export function CatalogoDrawer({
                               </div>
                             )}
                             {ex.secondaryMuscles.length > 0 && (
-                              <p className="text-[13px] text-muted-foreground mb-2">
+                              <p className="text-caption text-muted-foreground mb-2">
                                 Secundários:{" "}
                                 {ex.secondaryMuscles.map((m) => MUSCULO_LABEL[m] ?? m).join(", ")}
                               </p>
                             )}
-                            <p className="text-[13px] font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
+                            <p className="text-caption font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
                               Como executar
                             </p>
                             <ol className="space-y-1">
@@ -381,7 +336,7 @@ export function CatalogoDrawer({
               })
             )}
             {exerciciosFiltrados.length > 100 && (
-              <p className="text-center text-[13px] text-muted-foreground py-3">
+              <p className="text-center text-caption text-muted-foreground py-3">
                 Mostrando 100 de {total}. Refine a busca para ver mais.
               </p>
             )}

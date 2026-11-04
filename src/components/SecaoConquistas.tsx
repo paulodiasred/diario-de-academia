@@ -31,9 +31,9 @@ export function SecaoConquistas({ sessoes, premium }: SecaoConquistasProps) {
             />
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-medium ${c.obtida ? "" : "text-muted-foreground"}`}>{c.titulo}</p>
-              <p className="text-[13px] text-muted-foreground">{c.descricao}</p>
+              <p className="text-caption text-muted-foreground">{c.descricao}</p>
             </div>
-            <span className="text-[13px] text-muted-foreground shrink-0 tabular-nums">
+            <span className="text-caption text-muted-foreground shrink-0 tabular-nums">
               {c.obtida
                 ? "Obtida"
                 : `${Math.min(c.atual, c.alvo).toLocaleString("pt-BR")}/${c.alvo.toLocaleString("pt-BR")}`}
@@ -41,7 +41,7 @@ export function SecaoConquistas({ sessoes, premium }: SecaoConquistasProps) {
           </li>
         ))}
         {bloqueadas > 0 && (
-          <li className="p-3 flex items-center gap-3 text-[13px] text-muted-foreground">
+          <li className="p-3 flex items-center gap-3 text-caption text-muted-foreground">
             <Lock className="w-4 h-4 shrink-0" aria-hidden />
             Mais {bloqueadas} conquistas no Premium
           </li>
