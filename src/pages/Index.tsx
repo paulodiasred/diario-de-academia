@@ -7,7 +7,6 @@ import { EstadoVazio, TelaCarregando } from "@/components/Estados";
 import { ErrorState } from "@/components/ErrorState";
 import { GraficoColunas } from "@/components/graficos";
 import { Indicador } from "@/components/Indicador";
-import { BannerSessaoAtiva } from "@/components/treino/BannerSessaoAtiva";
 import { BotaoIniciarTreino } from "@/components/treino/BotaoIniciarTreino";
 import { Button } from "@/components/ui/button";
 import {
@@ -90,8 +89,6 @@ const Index = () => {
           <Settings className="w-5 h-5" />
         </Button>
       </Cabecalho>
-
-      <BannerSessaoAtiva />
 
       {treinos.treinos.length === 0 && (
         <EstadoVazio

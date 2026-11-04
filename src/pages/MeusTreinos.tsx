@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { TelaCarregando } from "@/components/Estados";
 import { Cabecalho } from "@/components/Cabecalho";
-import { BannerSessaoAtiva } from "@/components/treino/BannerSessaoAtiva";
 import { BotaoIniciarTreino } from "@/components/treino/BotaoIniciarTreino";
 import type { TreinoPersonalizado } from "@/types/catalogo";
 import { Button } from "@/components/ui/button";
@@ -143,8 +142,6 @@ const MeusTreinos = () => {
                 : `Você usou os ${LIMITES_GRATUITO.treinos} treinos do plano gratuito. Exclua um ou conheça o Premium.`}
             </p>
           )}
-
-          <BannerSessaoAtiva />
 
           {musculosDisponiveis.length > 1 && (
             <select

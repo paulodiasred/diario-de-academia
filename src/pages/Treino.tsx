@@ -5,12 +5,14 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleHelp,
+  ListOrdered,
   Minus,
   StickyNote,
   LineChart,
   Plus,
   Trash2,
 } from "lucide-react";
+import { CatalogoCarregando } from "@/components/CatalogoCarregando";
 import { TelaCarregando } from "@/components/Estados";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -30,18 +32,27 @@ import { GraficoLinha, preCarregarGraficos } from "@/components/graficos";
 import { ImagemExercicio } from "@/components/ImagemExercicio";
 import { DescansoBar } from "@/components/treino/DescansoBar";
 import { CabecalhoSeries, LinhaSerie } from "@/components/treino/LinhaSerie";
+import { ListaExerciciosSheet } from "@/components/treino/ListaExerciciosSheet";
+import { exercicioParaTreino } from "@/domain/catalogo";
 import {
+  adicionarExercicioNaSessao,
   adicionarSerie,
   anotarExercicio,
   atualizarSerie,
+  contarSeriesFeitas,
   contarSeriesPendentes,
   descreverSerie,
+  finalizarSessao,
   historicoDoExercicio,
   irParaExercicio,
   pontosEvolucao,
+  proximoExercicioPendente,
+  removerExercicioDaSessao,
   removerSerie,
   temSerieConcluida,
+  trocarExercicio,
   ultimaExecucao,
+  validarCorrecao,
   type Descanso,
 } from "@/domain/sessao";
 import { useManterTelaLigada } from "@/hooks/useManterTelaLigada";
@@ -49,10 +60,18 @@ import { useSessaoAtiva } from "@/hooks/useSessaoAtiva";
 import { useSessoes } from "@/hooks/useSessoes";
 import { slug } from "@/domain/texto";
 import { usePerfil } from "@/hooks/usePerfil";
-import { MEDIDA_LABEL, MUSCULO_LABEL } from "@/types/catalogo";
+import { MEDIDA_LABEL, MUSCULO_LABEL, type ExercicioCatalogo } from "@/types/catalogo";
 
-// Traz o catálogo inteiro: só é baixado depois que a tela de treino já abriu.
+// Trazem o catálogo inteiro: só são baixados depois que a tela de treino já abriu.
 const ComoFazerSheet = lazy(() => import("@/components/treino/ComoFazerSheet"));
+const CatalogoDrawer = lazy(() =>
+  import("@/components/CatalogoDrawer").then((m) => ({ default: m.CatalogoDrawer })),
+);
+
+/** Altura que a barra de descanso ocupa no pé da tela. */
+const ALTURA_DESCANSO = 96;
+
+type ModoCatalogo = { tipo: "adicionar" } | { tipo: "trocar"; indice: number };
 
 function Cronometro({ inicio }: { inicio: string }) {
   const [, setTique] = useState(0);
@@ -81,8 +100,11 @@ const Treino = () => {
   const [confirmarDescarte, setConfirmarDescarte] = useState(false);
   const [evolucaoAberta, setEvolucaoAberta] = useState(false);
   const [comoFazerAberto, setComoFazerAberto] = useState(false);
+  const [listaAberta, setListaAberta] = useState(false);
+  const [modoCatalogo, setModoCatalogo] = useState<ModoCatalogo | null>(null);
   const [notasAbertas, setNotasAbertas] = useState<number | null>(null);
   const saindo = useRef(false);
+  const seguirProximaSerie = useRef(false);
   useManterTelaLigada(!!sessao);
 
   // Baixa agora as telas seguintes: na academia, o sinal pode sumir antes de finalizar.
@@ -92,9 +114,14 @@ const Treino = () => {
     void import("./MeusTreinos");
     void preCarregarGraficos();
     void import("@/components/treino/ComoFazerSheet");
+    void import("@/components/CatalogoDrawer");
   }, []);
 
   const exercicio = sessao?.exercicios[sessao.exercicioAtual];
+  const indiceAtual = sessao?.exercicioAtual;
+  const idAtual = exercicio?.exercicioId;
+  const proximaSerie = exercicio ? exercicio.series.findIndex((s) => !s.concluida) : -1;
+  const comDescanso = !!sessao?.descanso;
 
   const anterior = useMemo(
     () => (exercicio ? ultimaExecucao(sessoes, exercicio.exercicioId, exercicio.nome) : null),
@@ -105,6 +132,31 @@ const Treino = () => {
     (descanso: Descanso | null) => alterar((s) => ({ ...s, descanso })),
     [alterar],
   );
+
+  // Exercício novo começa do topo. Reabrir a tela não mexe na rolagem: só a troca conta.
+  const exercicioAnterior = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (idAtual === undefined) return;
+    const trocou = exercicioAnterior.current !== undefined && exercicioAnterior.current !== idAtual;
+    exercicioAnterior.current = idAtual;
+    if (trocou) {
+      seguirProximaSerie.current = false;
+      window.scrollTo(0, 0);
+    }
+  }, [idAtual, indiceAtual]);
+
+  // Depois de concluir, a próxima série precisa estar à vista, e não atrás do descanso.
+  useEffect(() => {
+    if (!seguirProximaSerie.current || proximaSerie < 0) return;
+    seguirProximaSerie.current = false;
+    const linha = document.querySelector(`[data-serie="${proximaSerie + 1}"]`);
+    if (!linha) return;
+    const caixa = linha.getBoundingClientRect();
+    const limite = window.innerHeight - (comDescanso ? ALTURA_DESCANSO : 0);
+    if (caixa.top < 0 || caixa.bottom > limite) {
+      window.scrollBy(0, caixa.bottom > limite ? caixa.bottom - limite + 8 : caixa.top - 8);
+    }
+  }, [proximaSerie, comDescanso]);
 
   if (carregando) {
     return (
@@ -120,21 +172,37 @@ const Treino = () => {
   const total = sessao.exercicios.length;
   const anteriores = anterior?.series.filter((s) => s.concluida) ?? [];
   const pendentes = contarSeriesPendentes(sessao);
+  const feitas = contarSeriesFeitas(sessao);
+  const totalSeries = feitas + pendentes;
   const algumaFeita = temSerieConcluida(sessao);
   const imagemDoExercicio = exercicio.images?.[0] ?? vinculos[slug(exercicio.nome)]?.imagem;
-  const proximaSerie = exercicio.series.findIndex((s) => !s.concluida);
+  const seguinte = proximoExercicioPendente(sessao);
   // Só a última série, e só se ainda não foi feita: nada concluído é removido por engano.
   const ultimaSerie = exercicio.series.length - 1;
   const podeRemoverSerie = ultimaSerie > 0 && !exercicio.series[ultimaSerie].concluida;
   const mostrarNotas = notasAbertas === indice || exercicio.notas.length > 0;
 
   const aoAlternar = (serie: number) => {
+    seguirProximaSerie.current = !exercicio.series[serie].concluida;
     const erro = alternarSerie(indice, serie);
+    if (erro) seguirProximaSerie.current = false;
     if (erro === "peso") toast.error("Confira o peso desta série");
     if (erro === "reps") toast.error("Informe as repetições desta série");
   };
 
   const concluirTreino = () => {
+    // Série já feita pode ser corrigida: um campo apagado não pode ir para o histórico assim.
+    const final = finalizarSessao(sessao);
+    const problema = validarCorrecao(final);
+    if (problema) {
+      const comProblema = final.exercicios[problema.exercicio];
+      setConfirmarFim(false);
+      alterar((s) =>
+        irParaExercicio(s, s.exercicios.findIndex((e) => e.exercicioId === comProblema.exercicioId)),
+      );
+      toast.error(`Confira a série ${problema.serie + 1} de ${comProblema.nome}`);
+      return;
+    }
     saindo.current = true;
     const id = finalizar();
     navigate(`/treino/resumo/${id}`, { replace: true });
@@ -146,32 +214,63 @@ const Treino = () => {
     navigate("/", { replace: true });
   };
 
+  const irPara = (destino: number) => {
+    alterar((s) => irParaExercicio(s, destino));
+    setListaAberta(false);
+  };
+
+  const escolherDoCatalogo = (ex: ExercicioCatalogo) => {
+    const noTreino = exercicioParaTreino(ex, total);
+    if (modoCatalogo?.tipo === "trocar") {
+      const posicao = modoCatalogo.indice;
+      alterar((s) => trocarExercicio(s, posicao, noTreino, sessoes));
+      setModoCatalogo(null);
+      setListaAberta(false);
+      toast.success(`Trocado por ${ex.name}, só no treino de hoje`);
+    } else {
+      alterar((s) => adicionarExercicioNaSessao(s, noTreino, sessoes));
+    }
+  };
+
   return (
-    <div className="min-h-screen p-4 pb-32 max-w-md mx-auto space-y-4">
+    <div className="min-h-screen p-3 pb-32 max-w-md mx-auto space-y-3">
       {/* Cabeçalho */}
-      <header className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" aria-label="Voltar ao início" onClick={() => navigate("/")}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="flex-1 min-w-0">
-          <h1 className="font-bold truncate">{sessao.nome}</h1>
-          <p className="text-sm text-muted-foreground">
-            <Cronometro inicio={sessao.iniciadaEm} /> · {pendentes} série
-            {pendentes !== 1 ? "s" : ""} pendente{pendentes !== 1 ? "s" : ""}
-          </p>
+      <header className="space-y-2">
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-11 w-9 shrink-0" aria-label="Voltar ao início" onClick={() => navigate("/")}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="font-bold truncate leading-tight">{sessao.nome}</h1>
+            <p className="text-sm text-muted-foreground">
+              <Cronometro inicio={sessao.iniciadaEm} /> · {feitas} de {totalSeries} séries
+            </p>
+          </div>
+          <Button
+            variant={pendentes === 0 ? "default" : "secondary"}
+            className="h-11 shrink-0"
+            onClick={() => (algumaFeita ? setConfirmarFim(true) : setConfirmarDescarte(true))}
+          >
+            Finalizar
+          </Button>
         </div>
-        <Button
-          variant={pendentes === 0 ? "default" : "secondary"}
-          className="h-11"
-          onClick={() => (algumaFeita ? setConfirmarFim(true) : setConfirmarDescarte(true))}
+        <div
+          role="progressbar"
+          aria-label="Progresso do treino"
+          aria-valuemin={0}
+          aria-valuemax={totalSeries}
+          aria-valuenow={feitas}
+          className="h-1 rounded-full bg-secondary overflow-hidden"
         >
-          Finalizar
-        </Button>
+          <div
+            className="h-full rounded-full bg-primary transition-all"
+            style={{ width: `${totalSeries > 0 ? (feitas / totalSeries) * 100 : 0}%` }}
+          />
+        </div>
       </header>
 
       {/* Navegação entre exercícios */}
-      {total > 1 && (
-      <nav aria-label="Exercícios do treino" className="flex items-center gap-2">
+      <nav aria-label="Exercícios do treino" className="flex items-center gap-1.5">
         <Button
           variant="outline"
           size="icon"
@@ -182,29 +281,22 @@ const Treino = () => {
         >
           <ChevronLeft className="w-5 h-5" />
         </Button>
-        <div className="flex flex-1 min-w-0 gap-1.5 overflow-x-auto py-1">
-          {sessao.exercicios.map((e, i) => {
-            const completo = e.series.every((s) => s.concluida);
-            return (
-              <button
-                key={`${e.exercicioId}-${i}`}
-                type="button"
-                aria-label={`Ir para ${e.nome}`}
-                aria-current={i === indice ? "step" : undefined}
-                onClick={() => alterar((s) => irParaExercicio(s, i))}
-                className={`h-9 min-w-9 shrink-0 rounded-lg text-sm font-semibold ${
-                  i === indice
-                    ? "bg-foreground text-background"
-                    : completo
-                      ? "bg-primary/20 text-primary"
-                      : "bg-secondary/60 text-muted-foreground"
-                }`}
-              >
-                {i + 1}
-              </button>
-            );
-          })}
-        </div>
+        <button
+          type="button"
+          aria-label={`Ver lista de exercícios. Exercício ${indice + 1} de ${total}${seguinte ? `. Próximo: ${seguinte.nome}` : ""}`}
+          onClick={() => setListaAberta(true)}
+          className="flex-1 min-w-0 h-11 rounded-md bg-secondary/60 px-2.5 flex items-center gap-2 text-left"
+        >
+          <ListOrdered aria-hidden className="w-4 h-4 shrink-0 text-muted-foreground" />
+          <span className="flex-1 min-w-0 leading-tight">
+            <span className="block text-[13px] font-semibold">
+              Exercício {indice + 1} de {total}
+            </span>
+            <span className="block text-[13px] text-muted-foreground truncate">
+              {seguinte ? `Próximo: ${seguinte.nome}` : "Ver a lista"}
+            </span>
+          </span>
+        </button>
         <Button
           variant="outline"
           size="icon"
@@ -216,18 +308,14 @@ const Treino = () => {
           <ChevronRight className="w-5 h-5" />
         </Button>
       </nav>
-      )}
 
       {/* Exercício atual */}
-      <section className="glass-card rounded-xl p-3 space-y-3">
-        <div className="flex items-start gap-3 px-1">
-          <ImagemExercicio caminho={imagemDoExercicio} alt="" className="w-14 h-14 shrink-0" />
+      <section className="glass-card rounded-xl p-2.5 space-y-2">
+        <div className="flex items-start gap-2.5 px-1">
+          <ImagemExercicio caminho={imagemDoExercicio} alt="" className="w-11 h-11 shrink-0" />
           <div className="flex-1 min-w-0">
+            <h2 className="font-bold leading-tight">{exercicio.nome}</h2>
             <p className="text-[13px] text-muted-foreground">
-              Exercício {indice + 1} de {total}
-            </p>
-            <h2 className="text-lg font-bold leading-tight">{exercicio.nome}</h2>
-            <p className="text-[13px] text-muted-foreground mt-0.5">
               {[MUSCULO_LABEL[exercicio.primaryMuscles[0]], MEDIDA_LABEL[exercicio.medida]]
                 .filter(Boolean)
                 .join(" · ")}
@@ -236,13 +324,13 @@ const Treino = () => {
         </div>
 
         <div className="flex gap-1">
-          <Button variant="ghost" className="h-11 gap-1.5 px-2" onClick={() => setComoFazerAberto(true)}>
+          <Button variant="ghost" className="h-9 gap-1.5 px-2" onClick={() => setComoFazerAberto(true)}>
             <CircleHelp className="w-4 h-4" />
             Como fazer
           </Button>
           <Button
             variant="ghost"
-            className="h-11 gap-1.5 px-2"
+            className="h-9 gap-1.5 px-2"
             aria-label="Ver evolução do exercício"
             onClick={() => setEvolucaoAberta(true)}
           >
@@ -259,7 +347,7 @@ const Treino = () => {
           </ul>
         )}
 
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <CabecalhoSeries medida={exercicio.medida} />
           {exercicio.series.map((serie, i) => (
             <LinhaSerie
@@ -323,6 +411,12 @@ const Treino = () => {
         )}
       </section>
 
+      {pendentes === 0 && (
+        <Button className="w-full h-12" onClick={() => setConfirmarFim(true)}>
+          Finalizar treino
+        </Button>
+      )}
+
       <Button
         variant="ghost"
         className="w-full h-11 gap-1.5 text-destructive"
@@ -333,6 +427,27 @@ const Treino = () => {
       </Button>
 
       {sessao.descanso && <DescansoBar descanso={sessao.descanso} onMudar={mudarDescanso} />}
+
+      <ListaExerciciosSheet
+        sessao={sessao}
+        aberto={listaAberta}
+        onFechar={() => setListaAberta(false)}
+        onIr={irPara}
+        onTrocar={(i) => setModoCatalogo({ tipo: "trocar", indice: i })}
+        onRemover={(i) => alterar((s) => removerExercicioDaSessao(s, i))}
+        onAdicionar={() => setModoCatalogo({ tipo: "adicionar" })}
+      />
+
+      {modoCatalogo && (
+        <Suspense fallback={<CatalogoCarregando onFechar={() => setModoCatalogo(null)} />}>
+          <CatalogoDrawer
+            open
+            onClose={() => setModoCatalogo(null)}
+            onAdicionar={escolherDoCatalogo}
+            exerciciosAdicionados={sessao.exercicios.map((e) => e.exercicioId)}
+          />
+        </Suspense>
+      )}
 
       {comoFazerAberto && (
         <Suspense fallback={null}>

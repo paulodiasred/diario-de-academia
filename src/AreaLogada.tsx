@@ -3,8 +3,12 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigationType 
 import { BottomNav } from "@/components/BottomNav";
 import { TelaCarregando } from "@/components/Estados";
 import { SessaoAtivaProvider } from "@/components/SessaoAtivaProvider";
+import { AvisoFimDescanso } from "@/components/treino/AvisoFimDescanso";
+import { MiniTreinoAtivo } from "@/components/treino/MiniTreinoAtivo";
 import { useAuth } from "@/hooks/useAuth";
 import { useMigracaoLegado } from "@/hooks/useMigracaoLegado";
+import { useSessaoAtiva } from "@/hooks/useSessaoAtiva";
+import { mostraTreinoAtivo } from "@/lib/navegacao";
 
 const Index = lazy(() => import("./pages/Index"));
 const MeusTreinos = lazy(() => import("./pages/MeusTreinos"));
@@ -30,6 +34,13 @@ function RolarAoTopo() {
   }, [pathname, tipo]);
 
   return null;
+}
+
+/** Reserva o espaço da barra do treino ativo: o fim das telas não fica atrás dela. */
+function EspacoTreinoAtivo() {
+  const { pathname } = useLocation();
+  const { sessao } = useSessaoAtiva();
+  return sessao && mostraTreinoAtivo(pathname) ? <div aria-hidden className="h-16" /> : null;
 }
 
 function Conteudo() {
@@ -63,7 +74,10 @@ function Conteudo() {
             </Routes>
           )}
         </Suspense>
+        {!novoCadastro && <EspacoTreinoAtivo />}
       </main>
+      <AvisoFimDescanso />
+      {!novoCadastro && <MiniTreinoAtivo />}
       {!novoCadastro && <BottomNav />}
     </BrowserRouter>
   );

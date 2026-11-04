@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { BookOpen, Home, LineChart, ListChecks } from "lucide-react";
+import { temBarraInferior } from "@/lib/navegacao";
 
 const navItems = [
   { path: "/", label: "Início", icon: Home },
@@ -12,7 +13,7 @@ export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  if (!navItems.some((item) => item.path === location.pathname)) return null;
+  if (!temBarraInferior(location.pathname)) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-4">

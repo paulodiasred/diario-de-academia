@@ -198,6 +198,9 @@ const TAMBEM_PEITO = new Set([
   "One_Arm_Floor_Press",
 ]);
 
+/** Isometrias contam tempo, não repetições. */
+const MEDIDA_POR_TEMPO = new Set(["Plank", "Side_Bridge"]);
+
 /** O que falta no catálogo. Sem foto: nenhuma imagem é reaproveitada de outro movimento. */
 const EXERCICIOS_EXTRAS: ExercicioCatalogo[] = [
   {
@@ -240,11 +243,13 @@ export function aplicarCuradoria(catalogo: ExercicioCatalogo[]): ExercicioCatalo
     ...catalogo.map((exercicio) => {
       const name = NOMES_CORRIGIDOS[exercicio.id];
       const peito = TAMBEM_PEITO.has(exercicio.id);
-      if (!name && !peito) return exercicio;
+      const porTempo = MEDIDA_POR_TEMPO.has(exercicio.id);
+      if (!name && !peito && !porTempo) return exercicio;
       return {
         ...exercicio,
         ...(name ? { name } : {}),
         ...(peito ? { primaryMuscles: ["chest", ...exercicio.primaryMuscles] } : {}),
+        ...(porTempo ? { medida: "tempo" as const } : {}),
       };
     }),
     ...EXERCICIOS_EXTRAS,

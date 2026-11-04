@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { useInstalarApp } from "@/hooks/useInstalarApp";
 import { usePerfil } from "@/hooks/usePerfil";
 import { avisoLigado, avisoSuportado, desligarAviso, ligarAviso } from "@/lib/avisoDescanso";
+import { definirSom, prepararSom, somLigado, somSuportado, tocarSomDescanso } from "@/lib/somDescanso";
 import { toast } from "sonner";
 
 const TEMAS = [
@@ -34,6 +35,7 @@ export function AjustesSheet({ aberto, onFechar }: AjustesSheetProps) {
   const { metaSemanal, definirMeta } = usePerfil();
   const { podeInstalar, mostrarDicaIos, instalar } = useInstalarApp();
   const [avisar, setAvisar] = useState(avisoLigado);
+  const [som, setSom] = useState(somLigado);
 
   const alternarAviso = async (ligar: boolean) => {
     if (!ligar) {
@@ -88,6 +90,30 @@ export function AjustesSheet({ aberto, onFechar }: AjustesSheetProps) {
               ))}
             </div>
           </fieldset>
+
+          {somSuportado() && (
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="som-descanso" className="text-sm font-medium">
+                Som no fim do descanso
+                <span className="block text-[13px] font-normal text-muted-foreground">
+                  Com o app na tela. No iPhone, o modo silencioso desliga o som.
+                </span>
+              </label>
+              <Switch
+                id="som-descanso"
+                checked={som}
+                onCheckedChange={(ligado) => {
+                  definirSom(ligado);
+                  setSom(ligado);
+                  // O toque no botão libera o áudio, e o bipe confirma o volume.
+                  if (ligado) {
+                    prepararSom();
+                    tocarSomDescanso();
+                  }
+                }}
+              />
+            </div>
+          )}
 
           {avisoSuportado() && (
             <div className="flex items-center justify-between gap-3">

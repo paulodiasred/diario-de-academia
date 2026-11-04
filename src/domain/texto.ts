@@ -30,6 +30,17 @@ export function formatarTempo(segundos: number): string {
     : `${minutos}:${resto}`;
 }
 
+export function partesDoTempo(segundos: number): { minutos: number; segundos: number } {
+  const total = Math.max(0, Math.round(segundos));
+  return { minutos: Math.floor(total / 60), segundos: total % 60 };
+}
+
+/** Dois campos vazios: sem tempo informado. 90 segundos viram 1:30 ao exibir. */
+export function juntarTempo(minutos: number | null, segundos: number | null): number | null {
+  if (minutos === null && segundos === null) return null;
+  return Math.round((minutos ?? 0) * 60 + (segundos ?? 0));
+}
+
 /** Campo numérico digitado: vazio ou inválido vira null, e aceita vírgula decimal. */
 export function paraNumeroOuNulo(texto: string): number | null {
   if (texto.trim() === "") return null;

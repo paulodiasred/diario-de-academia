@@ -1,29 +1,121 @@
 import { describe, expect, it } from "vitest";
 import type { ExercicioNoTreino } from "@/types/catalogo";
 import {
+  adicionarExercicioNaSessao,
   adicionarSerie,
   ajustarDescanso,
   alternarSerie,
   atualizarSerie,
   contarSeriesPendentes,
   criarSessao,
+  descansoTerminou,
   descreverSerie,
   duracaoDaSessao,
+  irParaExercicio,
   finalizarSessao,
   historicoDoExercicio,
   iniciarDescanso,
   pausarDescanso,
   pontosEvolucao,
+  proximoExercicioPendente,
+  removerExercicioDaSessao,
   removerSerie,
   removerSerieDoHistorico,
   resumirSessao,
   retomarDescanso,
+  segundosExcedidos,
   segundosRestantes,
   temSerieConcluida,
+  trocarExercicio,
   validarCorrecao,
   type Sessao,
   type SerieSessao,
 } from "./sessao";
+
+describe("mudanças durante o treino", () => {
+  const noTreino = (id: string, nome: string, ordem = 0): ExercicioNoTreino => ({
+    exercicioId: id,
+    exercicioNome: nome,
+    primaryMuscles: ["chest"],
+    category: "strength",
+    series: 2,
+    descanso: 60,
+    ordem,
+    medida: "carga_reps",
+    repsAlvo: 10,
+  });
+  const sessaoCom = () =>
+    criarSessao("s1", { id: "t1", nome: "Peito", exercicios: [noTreino("a", "Supino"), noTreino("b", "Crucifixo", 1), noTreino("c", "Voador", 2)] }, []);
+  const concluirPrimeira = (s: Sessao, exercicio: number) =>
+    alternarSerie(atualizarSerie(s, exercicio, 0, { peso: 20 }), exercicio, 0).sessao;
+
+  it("adiciona no fim e não repete exercício", () => {
+    const nova = adicionarExercicioNaSessao(sessaoCom(), noTreino("d", "Rosca"), []);
+    expect(nova.exercicios.map((e) => e.nome)).toEqual(["Supino", "Crucifixo", "Voador", "Rosca"]);
+    expect(adicionarExercicioNaSessao(nova, noTreino("d", "Rosca"), [])).toBe(nova);
+  });
+
+  it("adicionado já vem com os valores da última vez", () => {
+    const passada = finalizarSessao(concluirPrimeira(criarSessao("s0", { id: "t", nome: "T", exercicios: [noTreino("d", "Rosca")] }, []), 0));
+    const nova = adicionarExercicioNaSessao(sessaoCom(), noTreino("d", "Rosca"), [passada]);
+    expect(nova.exercicios[3].series[0].peso).toBe(20);
+  });
+
+  it("troca na mesma posição, mas nunca apaga série feita", () => {
+    const trocada = trocarExercicio(sessaoCom(), 1, noTreino("d", "Rosca"), []);
+    expect(trocada.exercicios.map((e) => e.nome)).toEqual(["Supino", "Rosca", "Voador"]);
+
+    const comFeita = concluirPrimeira(sessaoCom(), 1);
+    expect(trocarExercicio(comFeita, 1, noTreino("d", "Rosca"), [])).toBe(comFeita);
+  });
+
+  it("não troca por um exercício que já está na lista", () => {
+    const sessao = sessaoCom();
+    expect(trocarExercicio(sessao, 0, noTreino("b", "Crucifixo"), [])).toBe(sessao);
+  });
+
+  it("remove sem deslocar o exercício atual, e nunca o último nem um já feito", () => {
+    const naTerceira = irParaExercicio(sessaoCom(), 2);
+    const removida = removerExercicioDaSessao(naTerceira, 0);
+    expect(removida.exercicios.map((e) => e.nome)).toEqual(["Crucifixo", "Voador"]);
+    expect(removida.exercicios[removida.exercicioAtual].nome).toBe("Voador");
+
+    const comFeita = concluirPrimeira(sessaoCom(), 0);
+    expect(removerExercicioDaSessao(comFeita, 0)).toBe(comFeita);
+
+    const unico = criarSessao("s", { id: "t", nome: "T", exercicios: [noTreino("a", "Supino")] }, []);
+    expect(removerExercicioDaSessao(unico, 0)).toBe(unico);
+  });
+
+  it("remover o último da lista, estando nele, volta para o anterior", () => {
+    const naUltima = irParaExercicio(sessaoCom(), 2);
+    const removida = removerExercicioDaSessao(naUltima, 2);
+    expect(removida.exercicioAtual).toBe(1);
+  });
+
+  it("mostra o próximo pendente, e nenhum quando só falta o atual", () => {
+    expect(proximoExercicioPendente(sessaoCom())?.nome).toBe("Crucifixo");
+    const unico = criarSessao("s", { id: "t", nome: "T", exercicios: [noTreino("a", "Supino")] }, []);
+    expect(proximoExercicioPendente(unico)).toBeNull();
+  });
+
+  it("corrigir série feita não reinicia o descanso", () => {
+    const concluida = concluirPrimeira(sessaoCom(), 0);
+    const corrigida = atualizarSerie(concluida, 0, 0, { peso: 25 });
+    expect(corrigida.descanso).toEqual(concluida.descanso);
+    expect(corrigida.exercicios[0].series[0]).toMatchObject({ peso: 25, concluida: true });
+  });
+
+  it("conta quanto passou do fim do descanso; pausado não conta", () => {
+    const agora = 1_000_000;
+    const descanso = { fimEm: agora - 12_500, restanteSeg: 0, duracaoSeg: 60 };
+    expect(segundosExcedidos(descanso, agora)).toBe(12);
+    expect(descansoTerminou(descanso, agora)).toBe(true);
+    expect(descansoTerminou({ ...descanso, fimEm: agora + 1000 }, agora)).toBe(false);
+    expect(segundosExcedidos({ fimEm: null, restanteSeg: 30, duracaoSeg: 60 }, agora)).toBe(0);
+    expect(descansoTerminou({ fimEm: null, restanteSeg: 0, duracaoSeg: 60 }, agora)).toBe(false);
+  });
+});
 
 describe("descrição da série com tempo", () => {
   const serie = (parcial: Partial<SerieSessao>): SerieSessao => ({

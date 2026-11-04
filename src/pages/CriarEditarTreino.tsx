@@ -2,12 +2,11 @@ import { lazy, Suspense, useCallback, useState, useEffect, useRef } from "react"
 import { useNavigate, useParams } from "react-router-dom";
 import { MotionConfig, Reorder } from "framer-motion";
 import { ArrowLeft, Plus, BookOpen, Calendar } from "lucide-react";
+import { CatalogoCarregando } from "@/components/CatalogoCarregando";
 import { TelaCarregando } from "@/components/Estados";
 import { ExercicioEditavel } from "@/components/treino/ExercicioEditavel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
@@ -51,25 +50,6 @@ function mover(lista: ExercicioNoTreino[], origem: number, destino: number): Exe
   const [item] = copia.splice(origem, 1);
   copia.splice(destino, 0, item);
   return renumerar(copia);
-}
-
-/** Com sinal ruim, o catálogo demora: o painel abre na hora, em vez de parecer que o toque falhou. */
-function CatalogoCarregando({ onFechar }: { onFechar: () => void }) {
-  return (
-    <Sheet open onOpenChange={(v) => !v && onFechar()}>
-      <SheetContent side="bottom" className="h-[92vh] rounded-t-2xl">
-        <SheetHeader>
-          <SheetTitle className="text-left text-lg font-bold">Catálogo de Exercícios</SheetTitle>
-        </SheetHeader>
-        <div role="status" aria-label="Carregando exercícios" className="pt-4 space-y-3">
-          <Skeleton className="h-10 w-full" />
-          {[0, 1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-14 w-full rounded-lg" />
-          ))}
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
 }
 
 const CriarEditarTreino = () => {

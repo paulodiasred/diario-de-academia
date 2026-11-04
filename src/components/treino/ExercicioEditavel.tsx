@@ -4,9 +4,11 @@ import { ImagemExercicio } from "@/components/ImagemExercicio";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { medidaDoExercicio } from "@/domain/sessao";
-import { formatarKg, formatarTempo } from "@/domain/texto";
+import { formatarKg, formatarTempo, juntarTempo, paraNumeroOuNulo, partesDoTempo } from "@/domain/texto";
 import type { ExercicioNoTreino, TipoMedida } from "@/types/catalogo";
 import { CATEGORIA_LABEL, MEDIDA_LABEL, MUSCULO_LABEL } from "@/types/catalogo";
+
+const DESCANSOS_RAPIDOS = [30, 60, 90, 120, 180];
 
 interface ContadorProps {
   rotulo: string;
@@ -190,6 +192,24 @@ export function ExercicioEditavel({
             />
           </div>
 
+          <div role="group" aria-label="Descanso rápido" className="flex gap-1.5">
+            {DESCANSOS_RAPIDOS.map((segundos) => (
+              <button
+                key={segundos}
+                type="button"
+                aria-pressed={ex.descanso === segundos}
+                onClick={() => onAtualizar({ descanso: segundos })}
+                className={`h-9 flex-1 rounded-lg text-[13px] font-medium ${
+                  ex.descanso === segundos
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary/70 text-foreground"
+                }`}
+              >
+                {segundos}s
+              </button>
+            ))}
+          </div>
+
           <div>
             <label className="text-[13px] text-muted-foreground block mb-1">
               Como medir
@@ -236,19 +256,41 @@ export function ExercicioEditavel({
             )}
             {!comReps && (
               <label className="text-[13px] text-muted-foreground">
-                Tempo (min)
+                Minutos
                 <Input
                   type="number"
-                  inputMode="decimal"
+                  inputMode="numeric"
                   min={0}
                   className="mt-1 h-10 bg-secondary/30"
-                  value={ex.duracaoAlvoSeg === undefined ? "" : ex.duracaoAlvoSeg / 60}
-                  onChange={(e) => {
-                    const minutos = paraNumeroOpcional(e.target.value);
+                  value={ex.duracaoAlvoSeg === undefined ? "" : partesDoTempo(ex.duracaoAlvoSeg).minutos}
+                  onChange={(e) =>
                     onAtualizar({
-                      duracaoAlvoSeg: minutos === undefined ? undefined : Math.round(minutos * 60),
-                    });
-                  }}
+                      duracaoAlvoSeg: juntarTempo(
+                        paraNumeroOuNulo(e.target.value),
+                        ex.duracaoAlvoSeg === undefined ? null : partesDoTempo(ex.duracaoAlvoSeg).segundos,
+                      ) ?? undefined,
+                    })
+                  }
+                />
+              </label>
+            )}
+            {!comReps && (
+              <label className="text-[13px] text-muted-foreground">
+                Segundos
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  className="mt-1 h-10 bg-secondary/30"
+                  value={ex.duracaoAlvoSeg === undefined ? "" : partesDoTempo(ex.duracaoAlvoSeg).segundos}
+                  onChange={(e) =>
+                    onAtualizar({
+                      duracaoAlvoSeg: juntarTempo(
+                        ex.duracaoAlvoSeg === undefined ? null : partesDoTempo(ex.duracaoAlvoSeg).minutos,
+                        paraNumeroOuNulo(e.target.value),
+                      ) ?? undefined,
+                    })
+                  }
                 />
               </label>
             )}

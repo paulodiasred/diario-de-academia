@@ -67,7 +67,7 @@ async function iniciar(page: Page, nome = "Treino de teste") {
 }
 
 const peso = (page: Page, n: number) => page.getByLabel(`Peso da série ${n} em kg`);
-const reps = (page: Page, n: number) => page.getByLabel(`Repetições da série ${n}`);
+const reps = (page: Page, n: number) => page.getByLabel(`Repetições da série ${n}`, { exact: true });
 
 /** Um único toque na série. */
 async function concluir(page: Page, n: number) {
@@ -1145,6 +1145,266 @@ test.describe("primeiro treino", () => {
     await page.getByRole("button", { name: "Catálogo", exact: true }).click();
     await expect(page.getByRole("status", { name: "Carregando exercícios" })).toBeVisible();
     await expect(page.getByPlaceholder("Buscar exercício...")).toBeVisible({ timeout: 15_000 });
+  });
+});
+
+test.describe("treino com uma mão", () => {
+  test("celular pequeno: 3 séries seguidas sem precisar rolar a tela", async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 640 });
+    await criarConta(page);
+    await criarTreino(page, "Pequeno");
+    await iniciar(page, "Pequeno");
+    await peso(page, 1).fill("20");
+
+    for (const n of [1, 2, 3]) {
+      const botao = page.getByRole("button", { name: `Concluir série ${n}`, exact: true });
+      const situacao = await botao.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const noCentro = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { naTela: r.top >= 0 && r.bottom <= innerHeight, livre: !!noCentro && el.contains(noCentro) };
+      });
+      expect(situacao, `série ${n}`).toEqual({ naTela: true, livre: true });
+      await botao.click();
+      await expect(page.getByRole("button", { name: `Desfazer série ${n}`, exact: true })).toBeVisible();
+    }
+  });
+
+  test("com mais séries, a próxima aparece sozinha, sem ficar atrás do descanso", async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 640 });
+    await criarConta(page);
+    await criarTreino(page, "Muitas");
+    await iniciar(page, "Muitas");
+    await peso(page, 1).fill("20");
+    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Adicionar série" }).click();
+
+    for (const n of [1, 2, 3, 4, 5]) {
+      await page.getByRole("button", { name: `Concluir série ${n}`, exact: true }).click();
+      const seguinte = page.getByRole("button", { name: `Concluir série ${n + 1}`, exact: true });
+      await expect(seguinte).toBeInViewport();
+      const livre = await seguinte.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const noCentro = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return !!noCentro && el.contains(noCentro);
+      });
+      expect(livre, `série ${n + 1} coberta`).toBe(true);
+    }
+  });
+
+  test("o exercício seguinte abre do topo, e a lista mostra os nomes", async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 640 });
+    await criarConta(page);
+    await criarTreino(page, "Dois", ["Supino Inclinado com Halteres", "Rosca Martelo"]);
+    await iniciar(page, "Dois");
+    await expect(page.getByRole("button", { name: /Próximo: Rosca Martelo/ })).toBeVisible();
+
+    await peso(page, 1).fill("20");
+    for (const n of [1, 2, 3]) await concluir(page, n).catch(() => undefined);
+
+    await expect(page.getByRole("heading", { name: "Rosca Martelo" })).toBeInViewport();
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+    await page.getByRole("button", { name: /Ver lista de exercícios/ }).click();
+    await page.getByRole("button", { name: "Ir para Supino Inclinado com Halteres" }).click();
+    await expect(page.getByRole("heading", { name: "Supino Inclinado com Halteres" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Desfazer série 1", exact: true })).toBeVisible();
+  });
+
+  test("trocar, remover e adicionar valem só para hoje", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page, "Flexivel", ["Supino Inclinado com Halteres", "Rosca Martelo", "Abdominal 3/4"]);
+    await iniciar(page, "Flexivel");
+    const painel = page.getByRole("dialog");
+
+    await page.getByRole("button", { name: /Ver lista de exercícios/ }).click();
+    await page.getByRole("button", { name: "Trocar Rosca Martelo" }).click();
+    await page.getByPlaceholder("Buscar exercício...").fill("Rosca Direta com Barra");
+    await page.getByRole("button", { name: "Adicionar Rosca Direta com Barra", exact: true }).click();
+    await expect(page.getByText(/Trocado por Rosca Direta com Barra/)).toBeVisible();
+
+    await page.getByRole("button", { name: /Ver lista de exercícios/ }).click();
+    await page.getByRole("button", { name: "Remover Abdominal 3/4 do treino de hoje" }).click();
+    await expect(painel.getByRole("button", { name: "Ir para Abdominal 3/4" })).toBeHidden();
+
+    await painel.getByRole("button", { name: "Adicionar exercício" }).click();
+    await page.getByPlaceholder("Buscar exercício...").fill("Leg Press");
+    await page.getByRole("button", { name: "Adicionar Leg Press", exact: true }).click();
+    await page.getByRole("button", { name: "Concluir", exact: true }).click();
+    await expect(painel.getByRole("button", { name: "Ir para Leg Press" })).toBeVisible();
+    await expect(painel.getByRole("button", { name: "Ir para Rosca Direta com Barra" })).toBeVisible();
+
+    // Exercício com série feita não pode ser trocado: a série sumiria.
+    await page.keyboard.press("Escape");
+    await peso(page, 1).fill("20");
+    await concluir(page, 1);
+    await page.getByRole("button", { name: /Ver lista de exercícios/ }).click();
+    await expect(page.getByRole("button", { name: "Trocar Supino Inclinado com Halteres" })).toBeHidden();
+    await page.keyboard.press("Escape");
+
+    // A ficha salva continua igual.
+    await page.goto("/meus-treinos");
+    await page.getByRole("button", { name: "Editar Flexivel" }).click();
+    await expect(page.getByRole("button", { name: "Configurar Rosca Martelo" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Configurar Abdominal 3/4" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Configurar Leg Press" })).toBeHidden();
+  });
+
+  test("ajuste rápido de carga e repetições, só na série da vez", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page);
+    await iniciar(page);
+    await peso(page, 1).fill("20");
+
+    await page.getByRole("button", { name: "Aumentar peso da série 1" }).click();
+    await expect(peso(page, 1)).toHaveValue("22.5");
+    await page.getByRole("button", { name: "Diminuir repetições da série 1" }).click();
+    await expect(reps(page, 1)).toHaveValue("9");
+    await expect(page.getByRole("button", { name: "Aumentar peso da série 2" })).toBeHidden();
+
+    await concluir(page, 1);
+    await expect(peso(page, 2)).toHaveValue("22.5");
+    await expect(page.getByRole("button", { name: "Aumentar peso da série 2" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Aumentar peso da série 1" })).toBeHidden();
+  });
+
+  test("corrigir série feita não reinicia o descanso, e valor apagado não vai para o histórico", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page);
+    await iniciar(page);
+    await peso(page, 1).fill("20");
+    await concluir(page, 1);
+    await page.getByRole("button", { name: "Pausar descanso" }).click();
+    const tempo = await page.getByRole("timer").textContent();
+
+    await peso(page, 1).fill("25");
+    await expect(page.getByRole("button", { name: "Desfazer série 1", exact: true })).toBeVisible();
+    await expect(page.getByRole("timer")).toHaveText(tempo as string);
+    // Corrigir a série feita não muda o que já está nas próximas.
+    await expect(peso(page, 2)).toHaveValue("20");
+
+    await reps(page, 1).fill("");
+    await page.getByRole("button", { name: "Finalizar", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Finalizar" }).click();
+    await expect(page.getByText("Confira a série 1 de Supino Inclinado com Halteres")).toBeVisible();
+    await expect(page.getByText("Treino concluído")).toBeHidden();
+
+    await reps(page, 1).fill("10");
+    await finalizar(page);
+    await expect(page.getByText("250 kg")).toBeVisible();
+  });
+
+  test("fim do descanso: toca o som e o aviso fica até dispensar", async ({ page }) => {
+    await page.addInitScript(() => {
+      const janela = window as unknown as { bipes: number };
+      janela.bipes = 0;
+      const original = AudioContext.prototype.createOscillator;
+      AudioContext.prototype.createOscillator = function (this: AudioContext) {
+        janela.bipes += 1;
+        return original.call(this);
+      };
+    });
+    await criarConta(page);
+    await criarTreino(page);
+    await iniciar(page);
+    await peso(page, 1).fill("20");
+    await concluir(page, 1);
+    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Menos 15 segundos" }).click();
+
+    await expect(page.getByText("Hora da próxima série")).toBeVisible({ timeout: 20_000 });
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { bipes: number }).bipes))
+      .toBe(3);
+
+    // Continua à vista bem depois: não some como um aviso comum.
+    await page.waitForTimeout(3_000);
+    await expect(page.getByText("Hora da próxima série")).toBeVisible();
+    await expect(page.getByRole("timer")).toContainText(/O descanso acabou há 0:0\d/);
+
+    await page.getByRole("button", { name: "Dispensar aviso" }).click();
+    await expect(page.getByText("Hora da próxima série")).toBeHidden();
+    expect(await page.evaluate(() => (window as unknown as { bipes: number }).bipes)).toBe(3);
+  });
+
+  test("som desligado nos ajustes não toca", async ({ page }) => {
+    await page.addInitScript(() => {
+      const janela = window as unknown as { bipes: number };
+      janela.bipes = 0;
+      const original = AudioContext.prototype.createOscillator;
+      AudioContext.prototype.createOscillator = function (this: AudioContext) {
+        janela.bipes += 1;
+        return original.call(this);
+      };
+    });
+    await criarConta(page);
+    await page.getByRole("button", { name: "Ajustes" }).click();
+    await page.getByRole("switch", { name: /Som no fim do descanso/ }).click();
+    await expect(page.getByRole("switch", { name: /Som no fim do descanso/ })).toHaveAttribute("aria-checked", "false");
+    await page.keyboard.press("Escape");
+
+    await criarTreino(page);
+    await iniciar(page);
+    await peso(page, 1).fill("20");
+    await concluir(page, 1);
+    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Menos 15 segundos" }).click();
+    await expect(page.getByText("Hora da próxima série")).toBeVisible({ timeout: 20_000 });
+    expect(await page.evaluate(() => (window as unknown as { bipes: number }).bipes)).toBe(0);
+  });
+
+  test("fora da tela de treino, o descanso continua à vista em qualquer aba", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page);
+    await iniciar(page);
+    await peso(page, 1).fill("20");
+    await concluir(page, 1);
+
+    await page.getByRole("button", { name: "Voltar ao início" }).click();
+    const barra = page.getByRole("button", { name: /Continuar Treino de teste/ });
+    await expect(barra).toContainText(/Descanso \d:\d\d/);
+
+    await page.getByRole("button", { name: "Evolução", exact: true }).click();
+    await expect(barra).toBeVisible();
+    await page.getByRole("button", { name: "Exercícios", exact: true }).click();
+    await expect(barra).toBeVisible();
+
+    // A barra não pode cobrir o fim da tela.
+    await page.goto("/meus-treinos");
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.getByRole("button", { name: "Excluir Treino de teste" }).click();
+    await page.keyboard.press("Escape");
+
+    await barra.click();
+    await expect(page).toHaveURL(/\/treino$/);
+    await page.getByRole("button", { name: "Pular descanso" }).click();
+    await page.goto("/");
+    await expect(page.getByRole("button", { name: /Continuar Treino de teste/ })).toContainText("2 séries pendentes");
+  });
+
+  test("tempo em minutos e segundos: prancha de 45 s fica 0:45 em toda parte", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page, "Isometria", ["Prancha"]);
+    await page.getByRole("button", { name: "Editar Isometria" }).click();
+    await page.getByRole("button", { name: "Configurar Prancha" }).click();
+    await page.getByLabel("Segundos").fill("45");
+    await expect(page.getByText(/0:45/)).toBeVisible();
+    await page.getByRole("button", { name: "60s", exact: true }).click();
+    await page.getByRole("button", { name: "30s", exact: true }).click();
+    await expect(page.getByText(/30s de descanso/)).toBeVisible();
+    await page.getByRole("button", { name: "Salvar" }).click();
+
+    await iniciar(page, "Isometria");
+    const minutos = page.getByLabel("Minutos da série 1", { exact: true });
+    const segundos = page.getByLabel("Segundos da série 1", { exact: true });
+    await expect(segundos).toHaveValue("45");
+    await expect(minutos).toHaveValue("0");
+    await page.getByRole("button", { name: "Aumentar segundos da série 1" }).click();
+    await expect(minutos).toHaveValue("1");
+    await expect(segundos).toHaveValue("0");
+    await page.getByRole("button", { name: "Diminuir segundos da série 1" }).click();
+    await expect(minutos).toHaveValue("1");
+    await minutos.fill("0");
+    await segundos.fill("45");
+    await concluir(page, 1);
+    await finalizar(page);
+    await expect(page.getByText("0:45")).toBeVisible();
   });
 });
 

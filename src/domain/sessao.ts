@@ -97,6 +97,21 @@ export function medidaDoExercicio(ex: Pick<ExercicioNoTreino, "medida" | "catego
   return ex.medida ?? (ex.category === "cardio" ? "tempo" : "carga_reps");
 }
 
+function exercicioDaSessao(ex: ExercicioNoTreino, anteriores: Sessao[]): ExercicioSessao {
+  const anterior = ultimaExecucao(anteriores, ex.exercicioId, ex.exercicioNome);
+  return {
+    exercicioId: ex.exercicioId,
+    nome: ex.exercicioNome,
+    medida: medidaDoExercicio(ex),
+    descanso: ex.descanso,
+    primaryMuscles: ex.primaryMuscles,
+    images: ex.images,
+    circuito: ex.circuito,
+    notas: "",
+    series: Array.from({ length: ex.series }, (_, i) => serieSugerida(ex, anterior, i)),
+  };
+}
+
 export function criarSessao(
   id: string,
   treino: Pick<TreinoPersonalizado, "id" | "nome" | "exercicios">,
@@ -105,20 +120,7 @@ export function criarSessao(
 ): Sessao {
   const exercicios = [...treino.exercicios]
     .sort((a, b) => a.ordem - b.ordem)
-    .map((ex): ExercicioSessao => {
-      const anterior = ultimaExecucao(anteriores, ex.exercicioId, ex.exercicioNome);
-      return {
-        exercicioId: ex.exercicioId,
-        nome: ex.exercicioNome,
-        medida: medidaDoExercicio(ex),
-        descanso: ex.descanso,
-        primaryMuscles: ex.primaryMuscles,
-        images: ex.images,
-        circuito: ex.circuito,
-        notas: "",
-        series: Array.from({ length: ex.series }, (_, i) => serieSugerida(ex, anterior, i)),
-      };
-    });
+    .map((ex) => exercicioDaSessao(ex, anteriores));
 
   return {
     id,
@@ -260,6 +262,43 @@ export function removerSerie(sessao: Sessao, exercicio: number, serie: number): 
   );
 }
 
+// ---------- Mudanças durante o treino. Só nesta sessão: a rotina salva não muda. ----------
+
+const temFeita = (e: ExercicioSessao) => e.series.some((s) => s.concluida);
+
+export const podeAlterarExercicio = (e: ExercicioSessao): boolean => !temFeita(e);
+
+/** Entra no fim da lista, com os valores da última vez. Exercício repetido é ignorado. */
+export function adicionarExercicioNaSessao(
+  sessao: Sessao,
+  ex: ExercicioNoTreino,
+  anteriores: Sessao[],
+): Sessao {
+  if (sessao.exercicios.some((e) => e.exercicioId === ex.exercicioId)) return sessao;
+  return { ...sessao, exercicios: [...sessao.exercicios, exercicioDaSessao(ex, anteriores)] };
+}
+
+/** Aparelho ocupado: troca na mesma posição. Série já feita nunca é apagada por aqui. */
+export function trocarExercicio(
+  sessao: Sessao,
+  indice: number,
+  ex: ExercicioNoTreino,
+  anteriores: Sessao[],
+): Sessao {
+  const atual = sessao.exercicios[indice];
+  if (!atual || !podeAlterarExercicio(atual)) return sessao;
+  if (sessao.exercicios.some((e, i) => i !== indice && e.exercicioId === ex.exercicioId)) return sessao;
+  return alterarExercicio(sessao, indice, () => exercicioDaSessao(ex, anteriores));
+}
+
+export function removerExercicioDaSessao(sessao: Sessao, indice: number): Sessao {
+  const atual = sessao.exercicios[indice];
+  if (!atual || !podeAlterarExercicio(atual) || sessao.exercicios.length <= 1) return sessao;
+  const exercicios = sessao.exercicios.filter((_, i) => i !== indice);
+  const ajustado = sessao.exercicioAtual > indice ? sessao.exercicioAtual - 1 : sessao.exercicioAtual;
+  return { ...sessao, exercicios, exercicioAtual: Math.min(ajustado, exercicios.length - 1) };
+}
+
 export function irParaExercicio(sessao: Sessao, indice: number): Sessao {
   if (indice < 0 || indice >= sessao.exercicios.length) return sessao;
   return { ...sessao, exercicioAtual: indice };
@@ -285,6 +324,15 @@ export function pausarDescanso(descanso: Descanso, agoraMs: number = Date.now())
   return { ...descanso, fimEm: null, restanteSeg: segundosRestantes(descanso, agoraMs) };
 }
 
+/** Quanto já passou do fim do descanso. Pausado não conta. */
+export function segundosExcedidos(descanso: Descanso, agoraMs: number = Date.now()): number {
+  if (descanso.fimEm === null) return 0;
+  return Math.max(0, Math.floor((agoraMs - descanso.fimEm) / 1000));
+}
+
+export const descansoTerminou = (descanso: Descanso, agoraMs: number = Date.now()): boolean =>
+  descanso.fimEm !== null && agoraMs >= descanso.fimEm;
+
 export function retomarDescanso(descanso: Descanso, agoraMs: number = Date.now()): Descanso {
   if (descanso.fimEm !== null) return descanso;
   return { ...descanso, fimEm: agoraMs + descanso.restanteSeg * 1000 };
@@ -306,6 +354,19 @@ export function ajustarDescanso(
 }
 
 // ---------- Finalização e resumo ----------
+
+export function contarSeriesFeitas(sessao: Sessao): number {
+  return sessao.exercicios.reduce((t, e) => t + e.series.filter((s) => s.concluida).length, 0);
+}
+
+/**
+ * O próximo com série pendente, sem voltar ao início da lista por engano:
+ * primeiro os seguintes e, só depois, os que ficaram para trás.
+ */
+export function proximoExercicioPendente(sessao: Sessao): ExercicioSessao | null {
+  const i = proximoPendente(sessao, sessao.exercicioAtual);
+  return i !== sessao.exercicioAtual && pendente(sessao.exercicios[i]) ? sessao.exercicios[i] : null;
+}
 
 export function temSerieConcluida(sessao: Sessao): boolean {
   return sessao.exercicios.some((e) => e.series.some((s) => s.concluida));
