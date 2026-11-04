@@ -97,6 +97,7 @@ test.describe("gestão de treinos", () => {
     await criarTreino(page, "Ordem", ["Abdominal 3/4", "Supino Inclinado com Halteres"]);
 
     await page.getByRole("button", { name: "Editar Ordem" }).click();
+    await page.getByRole("button", { name: "Configurar Supino Inclinado com Halteres" }).click();
     await page.getByRole("button", { name: "Subir Supino Inclinado com Halteres" }).click();
     await page.getByRole("button", { name: "Salvar" }).click();
     await expect(page.getByRole("button", { name: "Editar Ordem" })).toBeVisible();
@@ -593,7 +594,7 @@ test.describe("planos, metas e dados", () => {
     await page.getByRole("button", { name: "Começar" }).click();
     await page.getByRole("button", { name: "4 treinos por semana" }).click();
     await page.getByRole("button", { name: "Continuar" }).click();
-    await page.getByRole("button", { name: "Criar meu primeiro treino" }).click();
+    await page.getByRole("button", { name: "Montar minha ficha" }).click();
     await expect(page).toHaveURL(/\/meus-treinos\/criar$/);
 
     await page.goto("/");
@@ -983,6 +984,167 @@ test.describe("confiança nos dados", () => {
         .map((t) => t.textContent),
     );
     expect(cortados).toEqual([]);
+  });
+});
+
+test.describe("primeiro treino", () => {
+  const LISTA = (page: Page) => page.getByRole("dialog");
+
+  test("do onboarding ao treino em 3 toques, com um modelo", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("tab", { name: "Cadastrar" }).click();
+    await page.locator("#signup-email").fill(emailNovo());
+    await page.locator("#signup-password").fill(SENHA);
+    await page.getByRole("button", { name: "Criar Conta" }).click();
+    await page.getByRole("button", { name: "Começar" }).click();
+    await page.getByRole("button", { name: "3 treinos por semana" }).click();
+    await page.getByRole("button", { name: "Continuar" }).click();
+
+    await page.getByRole("button", { name: "Escolher um modelo pronto" }).click();
+    await page.getByRole("button", { name: /^ABC(?!D)/ }).click();
+    await page.getByRole("button", { name: "Usar este modelo" }).click();
+
+    await expect(page.getByRole("heading", { name: "Treino A - Peito, ombro e tríceps" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Treino B - Costas e bíceps" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Treino C - Pernas" })).toBeVisible();
+    await expect(page.getByText("3 de 4 treinos")).toBeVisible();
+
+    // Foi gravado, conta no plano e dá para treinar.
+    await page.reload();
+    await expect(page.getByText("3 de 4 treinos")).toBeVisible();
+    await iniciar(page, "Treino C - Pernas");
+    await expect(page.getByRole("heading", { name: "Agachamento Livre com Barra" })).toBeVisible();
+  });
+
+  test("modelo maior que as vagas do plano explica o motivo em vez de falhar", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page);
+    await page.goto("/meus-treinos/modelos");
+    await page.getByRole("button", { name: /^ABCD/ }).click();
+    await expect(page.getByText(/tem 4 fichas, e seu plano tem 3 vagas/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Usar este modelo" })).toBeHidden();
+  });
+
+  test("a busca entende o nome usado na academia e mostra o básico primeiro", async ({ page }) => {
+    await criarConta(page);
+    await page.goto("/meus-treinos/criar");
+    await page.getByRole("button", { name: "Catálogo", exact: true }).click();
+    const busca = page.getByPlaceholder("Buscar exercício...");
+    await busca.fill("");
+    // Sem buscar, a lista já abre com o que todo mundo usa.
+    await expect(LISTA(page).getByRole("button", { name: /^Adicionar/ }).first()).toHaveAccessibleName(
+      "Adicionar Supino Reto com Barra - Pegada Média",
+    );
+
+    await busca.fill("peito");
+    await expect(LISTA(page).getByRole("button", { name: /^Adicionar/ }).first()).toHaveAccessibleName(/Supino/);
+
+    for (const [termo, nome] of [
+      ["cadeira extensora", "Cadeira Extensora"],
+      ["voador", "Voador (Peck Deck)"],
+      ["puxada frontal", "Puxada Frontal com Pegada Larga"],
+      ["burpee", "Burpee"],
+    ]) {
+      await busca.fill(termo);
+      await expect(page.getByRole("button", { name: `Adicionar ${nome}`, exact: true })).toBeVisible();
+    }
+  });
+
+  test("chips de grupo filtram, e Concluir fecha mostrando quantos foram adicionados", async ({ page }) => {
+    await criarConta(page);
+    await page.goto("/meus-treinos/criar");
+    await page.getByRole("button", { name: "Catálogo", exact: true }).click();
+    const painel = LISTA(page);
+
+    await painel.getByRole("button", { name: "Pernas", exact: true }).click();
+    await expect(painel.getByRole("button", { name: "Pernas", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(painel.getByRole("button", { name: /^Adicionar/ }).first()).toHaveAccessibleName(
+      "Adicionar Agachamento Livre com Barra",
+    );
+    await expect(painel.getByRole("button", { name: "Adicionar Corrida na Esteira" })).toBeHidden();
+
+    await expect(painel.getByText("Nenhum exercício adicionado")).toBeVisible();
+    await painel.getByRole("button", { name: "Adicionar Agachamento Livre com Barra" }).click();
+    await painel.getByRole("button", { name: "Adicionar Leg Press", exact: true }).click();
+    await expect(painel.getByText("2 adicionados")).toBeVisible();
+
+    await painel.getByRole("button", { name: "Concluir" }).click();
+    await expect(page.getByRole("heading", { name: /Exercícios/ })).toContainText("(2)");
+  });
+
+  test("exercícios recolhidos mostram o resumo, e abrir permite configurar", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page, "Recolhido", ["Supino Inclinado com Halteres", "Abdominal 3/4"]);
+    await page.getByRole("button", { name: "Editar Recolhido" }).click();
+
+    await expect(page.getByText("3 × 10 · 60s de descanso").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Aumentar séries" })).toBeHidden();
+
+    await page.getByRole("button", { name: "Configurar Supino Inclinado com Halteres" }).click();
+    await page.getByRole("button", { name: "Aumentar séries" }).click();
+    await expect(page.getByText("4 × 10 · 60s de descanso")).toBeVisible();
+  });
+
+  test("arrastar reordena os exercícios", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page, "Arrastar", ["Supino Inclinado com Halteres", "Abdominal 3/4"]);
+    await page.getByRole("button", { name: "Editar Arrastar" }).click();
+
+    const nomes = () => page.getByRole("button", { name: /^Configurar/ }).evaluateAll((b) => b.map((x) => x.getAttribute("aria-label")));
+    expect(await nomes()).toEqual(["Configurar Supino Inclinado com Halteres", "Configurar Abdominal 3/4"]);
+
+    const alca = page.getByTestId("arrastar-Incline_Dumbbell_Press");
+    const caixa = (await alca.boundingBox())!;
+    await page.mouse.move(caixa.x + caixa.width / 2, caixa.y + caixa.height / 2);
+    await page.mouse.down();
+    for (let passo = 1; passo <= 8; passo++) {
+      await page.mouse.move(caixa.x + caixa.width / 2, caixa.y + caixa.height / 2 + passo * 12);
+      await page.waitForTimeout(30);
+    }
+    await page.mouse.up();
+    await expect.poll(nomes).toEqual(["Configurar Abdominal 3/4", "Configurar Supino Inclinado com Halteres"]);
+
+    await page.getByRole("button", { name: "Salvar" }).click();
+    await page.reload();
+    await iniciar(page, "Arrastar");
+    await expect(page.getByRole("heading", { name: "Abdominal 3/4" })).toBeVisible();
+  });
+
+  test("salvar incompleto aponta o campo, sem sair da tela", async ({ page }) => {
+    await criarConta(page);
+    await page.goto("/meus-treinos/criar");
+    await page.getByRole("button", { name: "Salvar" }).click();
+    const nome = page.getByPlaceholder("Ex: Peito e Tríceps");
+    await expect(page.getByText("Dê um nome ao treino")).toBeVisible();
+    await expect(nome).toBeFocused();
+    await expect(nome).toHaveAttribute("aria-invalid", "true");
+
+    await nome.fill("Sem exercícios");
+    await expect(page.getByText("Dê um nome ao treino")).toBeHidden();
+    await page.getByRole("button", { name: "Salvar" }).click();
+    await expect(page.getByText("Adicione pelo menos um exercício")).toBeVisible();
+    await expect(page).toHaveURL(/\/meus-treinos\/criar$/);
+  });
+
+  test("o botão de salvar fica à vista com a lista longa", async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 640 });
+    await criarConta(page);
+    await criarTreino(page, "Longo", ["Supino Inclinado com Halteres", "Abdominal 3/4", "Leg Press", "Prancha"]);
+    await page.getByRole("button", { name: "Editar Longo" }).click();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(page.getByRole("button", { name: "Salvar" })).toBeInViewport();
+  });
+
+  test("com sinal ruim, o catálogo abre o painel antes de terminar de baixar", async ({ page }) => {
+    await criarConta(page);
+    await page.route(/useCatalogoExercicios|CatalogoDrawer|exercises-ptbr/, async (rota) => {
+      await new Promise((r) => setTimeout(r, 2500));
+      await rota.continue();
+    });
+    await page.goto("/meus-treinos/criar");
+    await page.getByRole("button", { name: "Catálogo", exact: true }).click();
+    await expect(page.getByRole("status", { name: "Carregando exercícios" })).toBeVisible();
+    await expect(page.getByPlaceholder("Buscar exercício...")).toBeVisible({ timeout: 15_000 });
   });
 });
 

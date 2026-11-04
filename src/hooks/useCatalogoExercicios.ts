@@ -1,18 +1,30 @@
 import { useMemo, useState } from "react";
 import catalogoData from "@/exercises/exercises-ptbr-partial-translation.json";
-import { normalizarBusca } from "@/domain/texto";
+import { buscarExercicios, pertenceAoGrupo } from "@/domain/catalogo";
+import { aplicarCuradoria } from "@/domain/curadoriaCatalogo";
 import type { ExercicioCatalogo } from "@/types/catalogo";
 import { useExerciciosProprios } from "./useExerciciosProprios";
 
-const catalogo = catalogoData as ExercicioCatalogo[];
+/** O catálogo como a pessoa o vê: nomes corrigidos e exercícios acrescentados. */
+export const catalogo = aplicarCuradoria(catalogoData as ExercicioCatalogo[]);
 
 export interface FiltrosCatalogo {
   busca: string;
+  grupo: string;
   categoria: string;
   musculo: string;
   nivel: string;
   equipamento: string;
 }
+
+const SEM_FILTROS: FiltrosCatalogo = {
+  busca: "",
+  grupo: "",
+  categoria: "",
+  musculo: "",
+  nivel: "",
+  equipamento: "",
+};
 
 /** Mesmo músculo principal e equipamento. Não são variações oficiais, só parecidos. */
 export function exerciciosSemelhantes(
@@ -33,26 +45,20 @@ export function exerciciosSemelhantes(
 
 export function useCatalogoExercicios() {
   const { exercicios: proprios } = useExerciciosProprios();
-  const [filtros, setFiltros] = useState<FiltrosCatalogo>({
-    busca: "",
-    categoria: "",
-    musculo: "",
-    nivel: "",
-    equipamento: "",
-  });
+  const [filtros, setFiltros] = useState<FiltrosCatalogo>(SEM_FILTROS);
 
   const todos = useMemo(() => [...proprios, ...catalogo], [proprios]);
 
   const exerciciosFiltrados = useMemo(() => {
-    const busca = normalizarBusca(filtros.busca);
-    return todos.filter((ex) => {
-      if (busca && !normalizarBusca(ex.name).includes(busca)) return false;
+    const filtrados = todos.filter((ex) => {
+      if (filtros.grupo && !pertenceAoGrupo(ex, filtros.grupo)) return false;
       if (filtros.categoria && ex.category !== filtros.categoria) return false;
       if (filtros.musculo && !ex.primaryMuscles.includes(filtros.musculo)) return false;
       if (filtros.nivel && ex.level !== filtros.nivel) return false;
       if (filtros.equipamento && ex.equipment !== filtros.equipamento) return false;
       return true;
     });
+    return buscarExercicios(filtrados, filtros.busca);
   }, [filtros, todos]);
 
   const categorias = useMemo(
@@ -69,9 +75,7 @@ export function useCatalogoExercicios() {
     [],
   );
 
-  const limparFiltros = () => {
-    setFiltros({ busca: "", categoria: "", musculo: "", nivel: "", equipamento: "" });
-  };
+  const limparFiltros = () => setFiltros(SEM_FILTROS);
 
   return {
     todos,

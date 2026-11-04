@@ -9,6 +9,7 @@ import { useMigracaoLegado } from "@/hooks/useMigracaoLegado";
 const Index = lazy(() => import("./pages/Index"));
 const MeusTreinos = lazy(() => import("./pages/MeusTreinos"));
 const CriarEditarTreino = lazy(() => import("./pages/CriarEditarTreino"));
+const Modelos = lazy(() => import("./pages/Modelos"));
 const Treino = lazy(() => import("./pages/Treino"));
 const ResumoTreino = lazy(() => import("./pages/ResumoTreino"));
 const Exercicios = lazy(() => import("./pages/Exercicios"));
@@ -47,6 +48,7 @@ function Conteudo() {
               <Route path="/" element={<Index />} />
               <Route path="/meus-treinos" element={<MeusTreinos />} />
               <Route path="/meus-treinos/criar" element={<CriarEditarTreino />} />
+              <Route path="/meus-treinos/modelos" element={<Modelos />} />
               <Route path="/meus-treinos/editar/:id" element={<CriarEditarTreino />} />
               {/* Endereço antigo da tela de treino: pode estar em favoritos. */}
               <Route path="/meus-treinos/:id" element={<Navigate to="/meus-treinos" replace />} />

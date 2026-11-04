@@ -96,12 +96,17 @@ const Index = () => {
       {treinos.treinos.length === 0 && (
         <EstadoVazio
           titulo="Monte seu primeiro treino"
-          descricao="Escolha os exercícios, as séries e os dias da semana."
+          descricao="Comece com um modelo pronto ou passe a sua ficha para cá."
         >
-          <Button className="h-11 gap-1.5" onClick={() => navigate("/meus-treinos/criar")}>
-            <Plus className="w-4 h-4" />
-            Criar treino
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button className="h-11" onClick={() => navigate("/meus-treinos/modelos")}>
+              Escolher um modelo
+            </Button>
+            <Button variant="outline" className="h-11 gap-1.5" onClick={() => navigate("/meus-treinos/criar")}>
+              <Plus className="w-4 h-4" />
+              Criar treino
+            </Button>
+          </div>
         </EstadoVazio>
       )}
 

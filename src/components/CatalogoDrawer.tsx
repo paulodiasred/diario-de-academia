@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { GRUPOS_MUSCULARES } from "@/domain/catalogo";
 import { useCatalogoExercicios } from "@/hooks/useCatalogoExercicios";
 import type { ExercicioCatalogo } from "@/types/catalogo";
 import {
@@ -94,12 +95,35 @@ export function CatalogoDrawer({
             />
             {filtros.busca && (
               <button
+                type="button"
+                aria-label="Limpar busca"
                 onClick={() => setFiltros((f) => ({ ...f, busca: "" }))}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
+                className="absolute right-0 top-1/2 -translate-y-1/2 h-10 w-10 flex items-center justify-center"
               >
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
             )}
+          </div>
+
+          <div role="group" aria-label="Grupo muscular" className="-mx-4 px-4 flex gap-1.5 overflow-x-auto pb-1">
+            {GRUPOS_MUSCULARES.map((grupo) => {
+              const ativo = filtros.grupo === grupo.id;
+              return (
+                <button
+                  key={grupo.id}
+                  type="button"
+                  aria-pressed={ativo}
+                  onClick={() => setFiltros((f) => ({ ...f, grupo: ativo ? "" : grupo.id }))}
+                  className={`h-9 shrink-0 rounded-lg px-3 text-[13px] font-medium border ${
+                    ativo
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-secondary/30 text-foreground border-transparent"
+                  }`}
+                >
+                  {grupo.rotulo}
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-2">
@@ -363,6 +387,17 @@ export function CatalogoDrawer({
             )}
           </div>
         </ScrollArea>
+
+        <div className="px-4 py-3 border-t border-border/50 flex items-center gap-3">
+          <p className="flex-1 text-sm text-muted-foreground" role="status">
+            {exerciciosAdicionados.length === 0
+              ? "Nenhum exercício adicionado"
+              : `${exerciciosAdicionados.length} adicionado${exerciciosAdicionados.length !== 1 ? "s" : ""}`}
+          </p>
+          <Button className="h-11 px-6" onClick={onClose}>
+            Concluir
+          </Button>
+        </div>
       </SheetContent>
       <ExercicioProprioForm
         aberto={criando}

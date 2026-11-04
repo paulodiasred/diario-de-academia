@@ -128,6 +128,14 @@ const MeusTreinos = () => {
             Criar novo treino
           </Button>
 
+          <Button
+            variant="outline"
+            onClick={() => navigate("/meus-treinos/modelos")}
+            className="w-full h-11 -mt-3"
+          >
+            Usar um modelo pronto
+          </Button>
+
           {!plano.premium && !plano.carregando && (
             <p className="text-[13px] text-muted-foreground -mt-2">
               {plano.podeCriar("treinos")

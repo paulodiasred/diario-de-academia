@@ -37,7 +37,8 @@ export function usePlano() {
 
   return {
     premium,
-    carregando: assinatura.isLoading,
+    // A contagem também: sem ela, a tela acharia que há vagas que já foram usadas.
+    carregando: assinatura.isLoading || contadores.isLoading,
     uso,
     podeCriar: (recurso: RecursoLimitado) => podeCriar(recurso, premium, uso),
     ajustarUso: (recurso: RecursoLimitado, delta: 1 | -1) => {

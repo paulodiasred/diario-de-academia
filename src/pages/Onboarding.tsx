@@ -86,14 +86,19 @@ const Onboarding = () => {
         {passo === 2 && (
           <>
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold">Agora, monte seu primeiro treino</h1>
+              <h1 className="text-2xl font-bold">Agora, sua ficha de treino</h1>
               <p className="text-muted-foreground">
-                Escolha os exercícios na biblioteca e defina séries e descanso. Leva poucos minutos.
+                Comece com um modelo pronto ou passe a sua ficha para cá, do seu jeito. Dá para ajustar tudo depois.
               </p>
             </div>
-            <Button className="h-12 w-full" onClick={() => concluir("/meus-treinos/criar")}>
-              Criar meu primeiro treino
-            </Button>
+            <div className="space-y-2">
+              <Button className="h-12 w-full" onClick={() => concluir("/meus-treinos/modelos")}>
+                Escolher um modelo pronto
+              </Button>
+              <Button variant="outline" className="h-12 w-full" onClick={() => concluir("/meus-treinos/criar")}>
+                Montar minha ficha
+              </Button>
+            </div>
           </>
         )}
       </div>
