@@ -81,5 +81,5 @@ No Firebase Console → Firestore, crie o documento `entitlements/<uid do usuár
 - **Verificação de email:** ainda não existe, e o cadastro é aberto.
 - **Política de privacidade e termos:** ainda não existem (Fase 6).
 - **Preço e pagamento:** aguardam a decisão em `adr/001-pagamentos.md`.
-- **Fase 4:** o teste em celular real e a migração com dados reais continuam em aberto.
+- **Fase 4:** o teste em celular real continua em aberto. A migração com dados reais foi confirmada pelo responsável.
 - **Insights com IA:** não implementados, como previsto.

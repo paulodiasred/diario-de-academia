@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 const SENHA = "senha-de-teste";
@@ -823,5 +824,137 @@ test("celular: nenhuma tela principal tem rolagem horizontal", async ({ page }) 
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
     expect(sobra, `rolagem horizontal em ${rota}`).toBeLessThanOrEqual(0);
+  }
+});
+
+test.describe("lançamento", () => {
+  test("termos e privacidade abrem sem login, e o cadastro aponta para eles", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("tab", { name: "Cadastrar" }).click();
+    await page.getByRole("link", { name: "política de privacidade" }).click();
+    await expect(page.getByRole("heading", { name: "Política de privacidade" })).toBeVisible();
+    await expect(page.getByText("Não vendemos seus dados")).toBeVisible();
+    await expect(page.getByRole("link", { name: "pauloalberto13@gmail.com" })).toHaveAttribute(
+      "href",
+      "mailto:pauloalberto13@gmail.com",
+    );
+
+    await page.goto("/termos");
+    await expect(page.getByRole("heading", { name: "Termos de uso" })).toBeVisible();
+    await expect(page.getByText(/não substitui médicos ou profissionais/)).toBeVisible();
+  });
+
+  test("conta nova pede confirmação de email, e dá para reenviar", async ({ page }) => {
+    await criarConta(page);
+    await page.goto("/conta");
+    await expect(page.getByRole("region", { name: "Confirmar email" })).toBeVisible();
+    await page.getByRole("button", { name: "Reenviar email" }).click();
+    await expect(page.getByText("Email enviado")).toBeVisible();
+  });
+
+  test("a tela fica ligada durante o treino", async ({ page }) => {
+    await page.addInitScript(() => {
+      const janela = window as unknown as { travas: number };
+      janela.travas = 0;
+      Object.defineProperty(navigator, "wakeLock", {
+        value: {
+          request: async () => {
+            janela.travas += 1;
+            return { release: async () => undefined };
+          },
+        },
+      });
+    });
+    await criarConta(page);
+    await criarTreino(page);
+    expect(await page.evaluate(() => (window as unknown as { travas: number }).travas)).toBe(0);
+    await iniciar(page);
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { travas: number }).travas))
+      .toBeGreaterThan(0);
+  });
+
+  for (const tema of ["dark", "light"]) {
+    test(`acessibilidade sem violações graves, tema ${tema}`, async ({ page }) => {
+      await page.addInitScript((t) => localStorage.setItem("theme", t), tema);
+      const analisar = async (nome: string) => {
+        await page.waitForTimeout(600);
+        const { violations } = await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa"])
+          .analyze();
+        const graves = violations
+          .filter((v) => v.impact === "serious" || v.impact === "critical")
+          .map((v) => `${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(" | ")}`);
+        expect(graves, nome).toEqual([]);
+      };
+
+      await page.goto("/");
+      await expect(page.locator("#signin-email")).toBeVisible();
+      await analisar("login");
+
+      await criarConta(page);
+      await analisar("início");
+
+      await criarTreino(page);
+      await analisar("treinos");
+
+      await page.goto("/exercicios");
+      await expect(page.getByRole("heading", { name: "Exercícios" })).toBeVisible();
+      await analisar("exercícios");
+
+      await page.goto("/meus-treinos");
+      await iniciar(page);
+      await analisar("treino");
+      await peso(page, 1).fill("20");
+      await concluir(page, 1);
+      await analisar("treino com descanso");
+      await finalizar(page);
+      await analisar("resumo");
+
+      await page.goto("/evolucao");
+      await expect(page.getByRole("heading", { name: "Evolução" })).toBeVisible();
+      await analisar("evolução");
+
+      await page.goto("/planos");
+      await expect(page.getByRole("heading", { name: "Planos" })).toBeVisible();
+      await analisar("planos");
+
+      await page.goto("/conta");
+      await expect(page.getByRole("heading", { name: "Minha conta" })).toBeVisible();
+      await analisar("conta");
+
+      await page.goto("/privacidade");
+      await expect(page.getByRole("heading", { name: "Política de privacidade" })).toBeVisible();
+      await analisar("privacidade");
+    });
+  }
+
+  for (const [nome, largura, altura] of [["celular pequeno", 320, 568], ["tablet", 768, 1024]] as const) {
+    test(`sem rolagem horizontal em ${nome}`, async ({ page }) => {
+      await page.setViewportSize({ width: largura, height: altura });
+      await criarConta(page);
+      await criarTreino(page);
+      await page.goto("/meus-treinos");
+      await iniciar(page);
+      const paginas = [
+        { rota: "/treino", titulo: "Treino de teste" },
+        { rota: "/", titulo: /Boa|Bom dia/ },
+        { rota: "/meus-treinos", titulo: "Meus Treinos" },
+        { rota: "/meus-treinos/criar", titulo: "Novo treino" },
+        { rota: "/exercicios", titulo: "Exercícios" },
+        { rota: "/evolucao", titulo: "Evolução" },
+        { rota: "/planos", titulo: "Planos" },
+        { rota: "/conta", titulo: "Minha conta" },
+        { rota: "/termos", titulo: "Termos de uso" },
+      ];
+      for (const { rota, titulo } of paginas) {
+        await page.goto(rota);
+        await expect(page.getByRole("heading", { name: titulo, level: 1 })).toBeVisible();
+        const sobra = await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        );
+        expect(sobra, `rolagem horizontal em ${rota}`).toBeLessThanOrEqual(0);
+      }
+    });
   }
 });

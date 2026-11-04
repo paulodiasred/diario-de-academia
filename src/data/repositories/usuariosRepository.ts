@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firestore";
 
 /** Exercício do catálogo que a pessoa escolheu como referência para um nome antigo. */
 export interface VinculoExercicio {

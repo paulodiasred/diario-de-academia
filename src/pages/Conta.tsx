@@ -27,7 +27,7 @@ const CONFIRMACAO = "EXCLUIR";
 
 const Conta = () => {
   const navigate = useNavigate();
-  const { user, excluirConta } = useAuth();
+  const { user, excluirConta, reenviarVerificacao } = useAuth();
   const { premium, uso } = usePlano();
   const { sessoes } = useSessoes();
   const [exportando, setExportando] = useState(false);
@@ -75,6 +75,25 @@ const Conta = () => {
           <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
         </div>
       </header>
+
+      {usaSenha && !user?.emailVerified && (
+        <section aria-label="Confirmar email" className="glass-card rounded-xl p-4 space-y-2">
+          <p className="text-sm">
+            Confirme seu email pelo link que enviamos. Isso ajuda a recuperar a conta se você esquecer a senha.
+          </p>
+          <Button
+            variant="outline"
+            className="h-11"
+            onClick={() =>
+              reenviarVerificacao()
+                .then(() => toast.success("Email enviado"))
+                .catch((erro) => toast.error(mensagemErroAuth(erro)))
+            }
+          >
+            Reenviar email
+          </Button>
+        </section>
+      )}
 
       <section aria-label="Plano" className="space-y-2">
         <h2 className="font-semibold">Plano</h2>
@@ -146,6 +165,15 @@ const Conta = () => {
           Excluir minha conta
         </Button>
       </section>
+
+      <nav aria-label="Documentos" className="flex gap-4 text-sm">
+        <a className="underline py-3" href="/termos">
+          Termos de uso
+        </a>
+        <a className="underline py-3" href="/privacidade">
+          Política de privacidade
+        </a>
+      </nav>
 
       <AlertDialog open={dialogoAberto} onOpenChange={setDialogoAberto}>
         <AlertDialogContent>

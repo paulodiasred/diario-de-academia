@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Minus, Pause, Play, Plus, SkipForward } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { avisarFimDoDescanso } from "@/lib/avisoDescanso";
 import {
   ajustarDescanso,
   pausarDescanso,
@@ -42,6 +43,7 @@ export function DescansoBar({ descanso, onMudar }: DescansoBarProps) {
     avisou.current = true;
     toast.success("Descanso finalizado! 💪");
     navigator.vibrate?.(300);
+    void avisarFimDoDescanso();
     onMudar(null);
   }, [rodando, restante, onMudar]);
 

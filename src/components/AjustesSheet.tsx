@@ -1,8 +1,14 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { useInstalarApp } from "@/hooks/useInstalarApp";
 import { usePerfil } from "@/hooks/usePerfil";
+import { avisoLigado, avisoSuportado, desligarAviso, ligarAviso } from "@/lib/avisoDescanso";
+import { toast } from "sonner";
 
 const TEMAS = [
   { valor: "dark", rotulo: "Escuro" },
@@ -26,6 +32,19 @@ export function AjustesSheet({ aberto, onFechar }: AjustesSheetProps) {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { metaSemanal, definirMeta } = usePerfil();
+  const { podeInstalar, mostrarDicaIos, instalar } = useInstalarApp();
+  const [avisar, setAvisar] = useState(avisoLigado);
+
+  const alternarAviso = async (ligar: boolean) => {
+    if (!ligar) {
+      desligarAviso();
+      setAvisar(false);
+      return;
+    }
+    const permitido = await ligarAviso();
+    setAvisar(permitido);
+    if (!permitido) toast.error("O navegador não permitiu notificações.");
+  };
 
   return (
     <Sheet open={aberto} onOpenChange={(v) => !v && onFechar()}>
@@ -69,6 +88,29 @@ export function AjustesSheet({ aberto, onFechar }: AjustesSheetProps) {
               ))}
             </div>
           </fieldset>
+
+          {avisoSuportado() && (
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="avisar-descanso" className="text-sm font-medium">
+                Avisar o fim do descanso
+                <span className="block text-[13px] font-normal text-muted-foreground">
+                  Com o app aberto em segundo plano. O sistema pode suspender o app e impedir o aviso.
+                </span>
+              </label>
+              <Switch id="avisar-descanso" checked={avisar} onCheckedChange={(v) => void alternarAviso(v)} />
+            </div>
+          )}
+
+          {podeInstalar && (
+            <Button variant="outline" className="w-full h-11" onClick={() => void instalar()}>
+              Instalar o app
+            </Button>
+          )}
+          {mostrarDicaIos && (
+            <p className="text-[13px] text-muted-foreground">
+              Para instalar no iPhone: no Safari, toque em Compartilhar e em Adicionar à Tela de Início.
+            </p>
+          )}
 
           <button
             type="button"

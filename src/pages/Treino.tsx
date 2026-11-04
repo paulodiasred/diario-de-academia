@@ -44,6 +44,7 @@ import {
   ultimaExecucao,
   type Descanso,
 } from "@/domain/sessao";
+import { useManterTelaLigada } from "@/hooks/useManterTelaLigada";
 import { useSessaoAtiva } from "@/hooks/useSessaoAtiva";
 import { useSessoes } from "@/hooks/useSessoes";
 import { slug } from "@/domain/texto";
@@ -82,6 +83,7 @@ const Treino = () => {
   const [comoFazerAberto, setComoFazerAberto] = useState(false);
   const [notasAbertas, setNotasAbertas] = useState<number | null>(null);
   const saindo = useRef(false);
+  useManterTelaLigada(!!sessao);
 
   // Baixa agora as telas seguintes: na academia, o sinal pode sumir antes de finalizar.
   useEffect(() => {

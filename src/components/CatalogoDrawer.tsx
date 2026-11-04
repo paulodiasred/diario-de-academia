@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, Search, X, Plus, ChevronDown } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import { ImagemExercicio } from "@/components/ImagemExercicio";
 import { ExercicioProprioForm } from "@/components/ExercicioProprioForm";
 import {
@@ -64,6 +64,7 @@ export function CatalogoDrawer({
     filtros.equipamento;
 
   return (
+    <MotionConfig reducedMotion="user">
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="bottom"
@@ -369,5 +370,6 @@ export function CatalogoDrawer({
         onSalvo={onAdicionar}
       />
     </Sheet>
+    </MotionConfig>
   );
 }

@@ -1,5 +1,5 @@
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firestore";
 import type { TreinoRegistro } from "@/data/treino";
 
 export function paraIso(valor: unknown): string {

@@ -8,7 +8,7 @@ import {
   where,
   writeBatch,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firestore";
 import type { TreinoPersonalizado } from "@/types/catalogo";
 import { normalizarTreino, type TreinoInput } from "@/domain/schemas";
 import { ajustarContadorNoLote } from "./planoRepository";

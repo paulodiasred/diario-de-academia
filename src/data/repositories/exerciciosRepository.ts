@@ -1,5 +1,5 @@
 import { collection, doc, getDocs, setDoc, Timestamp, writeBatch } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firestore";
 import type { ExercicioCatalogo } from "@/types/catalogo";
 import { normalizarExercicioProprio, type ExercicioProprioInput } from "@/domain/schemas";
 import { ajustarContadorNoLote } from "./planoRepository";

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Mail, Lock, UserPlus, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,11 +72,7 @@ export function AuthForm() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen max-w-md mx-auto p-6 flex flex-col justify-center"
-    >
+    <main className="min-h-screen max-w-md mx-auto p-6 flex flex-col justify-center">
       <div className="text-center mb-8">
         <img src="/logo.svg" alt="" className="w-16 h-16 mx-auto mb-4" />
         <h1 className="text-3xl font-bold mb-2">Diário de Academia</h1>
@@ -217,9 +212,21 @@ export function AuthForm() {
                 </>
               )}
             </Button>
+
+            <p className="text-[13px] text-center text-muted-foreground">
+              Ao criar uma conta, você concorda com os{" "}
+              <a className="underline" href="/termos">
+                termos de uso
+              </a>{" "}
+              e a{" "}
+              <a className="underline" href="/privacidade">
+                política de privacidade
+              </a>
+              .
+            </p>
           </form>
         </TabsContent>
       </Tabs>
-    </motion.div>
+    </main>
   );
 }

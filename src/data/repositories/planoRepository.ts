@@ -4,7 +4,7 @@ import {
   increment,
   type WriteBatch,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firestore";
 import { PLANO_GRATUITO, type Assinatura, type Contadores, type RecursoLimitado } from "@/domain/planos";
 import { paraIso } from "./registrosRepository";
 

@@ -9,7 +9,7 @@ import {
   writeBatch,
   type DocumentData,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firestore";
 import type { Sessao } from "@/domain/sessao";
 import { paraIso } from "./registrosRepository";
 

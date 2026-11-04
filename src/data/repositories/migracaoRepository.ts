@@ -1,5 +1,5 @@
 import { doc, getDoc, Timestamp, writeBatch } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firestore";
 import {
   converterRegistrosEmSessoes,
   rotinasDoTreinoFixo,

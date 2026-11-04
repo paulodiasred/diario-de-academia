@@ -7,7 +7,7 @@ import {
   writeBatch,
   type DocumentReference,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firestore";
 import { listarExerciciosProprios } from "./exerciciosRepository";
 import { listarMetas } from "./metasRepository";
 import { listarRegistrosLegados } from "./registrosRepository";

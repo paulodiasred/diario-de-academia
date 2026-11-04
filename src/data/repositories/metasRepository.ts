@@ -1,5 +1,5 @@
 import { collection, deleteDoc, doc, getDocs, setDoc, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firestore";
 import type { Meta, TipoMeta } from "@/domain/metas";
 
 const colecao = (uid: string) => collection(db, "users", uid, "metas");

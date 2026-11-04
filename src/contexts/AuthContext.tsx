@@ -12,6 +12,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  reenviarVerificacao: () => Promise<void>;
   /** `senha` para quem entra com email; sem ela, confirma pelo Google. */
   excluirConta: (senha?: string) => Promise<void>;
 }

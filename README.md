@@ -1,130 +1,83 @@
-# Diario de Academia
+# Diário de Academia
 
-Aplicacao web para acompanhar treinos de musculacao e cardio, registrando series, carga e evolucao ao longo dos dias.
+**Seu treino, sua evolução, seus resultados.**
 
-O projeto foi iniciado no Lovable e evoluido para desenvolvimento local com React + TypeScript.
-
-## Sobre o projeto
-
-Em 2026 eu cismei que queria emagrecer. Entrei na academia em 21 de janeiro e logo percebi que sempre me perdia no numero de series e, pior, esquecia o peso que tinha usado em cada aparelho.
-
-E claro... eu nao queria pagar por app nenhum pra isso kkkkk. Entao separei uma noite e fiz esse projetinho.
-
-Ele e simples e direto: meu treino ja estava montado, entao so organizei tudo no app. Hoje eu consigo marcar exatamente em qual serie estou, recuperar automaticamente o ultimo peso usado, consultar um historico rapido e usar um timer de descanso animado.
-
-Esta tudo responsivo (testado no meu Redmi Note 12 Pro) e cumpre exatamente o objetivo principal: me ajudar durante o treino sem complicacao.
-
-Nas proximas versoes, quero adicionar edicao de treino e criacao de treino do zero.
-
-## Screenshots
-
-![Tela de login](docs/images/login.jpg)
-![Visao da semana](docs/images/semana.jpg)
-![Treino selecionado](docs/images/treino-selecionado.jpg)
-![Treino em execucao com descanso](docs/images/treino-descanso-execucao.jpg)
+App web instalável (PWA) para registrar treinos de musculação e cardio com o celular na mão, inclusive sem internet.
 
 ## Funcionalidades
 
-- Autenticacao com Firebase (email/senha e Google)
-- Selecao de treino por dia da semana (Segunda a Sexta)
-- Registro de series por exercicio com controle de conclusao
-- Temporizador de descanso entre series
-- Marcacao de cardio concluido
-- Historico recente por exercicio com media de carga
-- Grafico de evolucao de progresso
-- Persistencia dos registros no Firestore por usuario
+- **Treino em andamento:** série registrada com um toque, valores da última vez já preenchidos, descanso com ajustes e recuperação se o app fechar.
+- **Treinos e biblioteca:** rotinas por dia da semana, 873 exercícios com imagens e instruções, e exercícios próprios.
+- **Evolução:** dashboard, histórico, gráficos de carga, recordes, calendário e comparação entre períodos, sempre com dados reais.
+- **Plano gratuito e Premium:** limites garantidos nas regras do Firestore. Ainda não há cobrança.
+- **Seus dados:** exportação em CSV e JSON, e exclusão de conta.
 
-## Stack do projeto
+## Stack
 
-- React 18
-- TypeScript
-- Vite
-- Tailwind CSS
-- shadcn/ui + Radix UI
-- Framer Motion
-- Firebase (Auth + Firestore)
-- Vitest + Testing Library
+React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, TanStack Query, zod, Recharts, Firebase (Auth e Firestore) e vite-plugin-pwa. Testes com Vitest e Playwright.
 
 ## Como rodar localmente
 
-### 1) Requisitos
-
-- Node.js 18+ (recomendado 20+)
-- npm 9+
-
-### 2) Instalacao
+Requer Node.js 20 ou superior. Os emuladores do Firebase e os testes de regras, E2E e PWA também exigem Java 11 ou superior.
 
 ```bash
-git clone <URL_DO_REPOSITORIO>
-cd diario-de-academia
-npm install
+npm ci
 ```
 
-### 3) Ambiente Firebase
-
-A configuracao vem das variaveis `VITE_FIREBASE_*` (veja `.env.example`). Sem elas, o app usa o projeto de producao.
-
-Para desenvolver sem tocar em producao, use os emuladores (exigem Java 11 ou superior):
+**Sem tocar em produção (recomendado), com os emuladores:**
 
 ```bash
 npm run emuladores     # em um terminal
 npm run dev:emulador   # em outro
 ```
 
-Se quiser usar seu proprio projeto Firebase:
+**Contra um projeto Firebase real:** copie `.env.example` para `.env.local`, preencha os valores e rode `npm run dev`. Sem variáveis, o app usa o projeto de produção, então cuidado com o que testar assim.
 
-1. Crie um projeto no Firebase
-2. Ative Authentication (Email/Senha e Google, opcional)
-3. Crie um banco Firestore
-4. Copie `.env.example` para `.env.local` e preencha os valores
-5. Publique as regras: `npx firebase deploy --only firestore:rules`
+## Scripts
 
-### 4) Executar
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | Servidor de desenvolvimento |
+| `npm run build` | Build de produção |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | Verificação de tipos |
+| `npm test` | Testes unitários |
+| `npm run test:rules` | Regras do Firestore no emulador, incluindo tentativas de burla |
+| `npm run test:e2e` | Fluxos, acessibilidade e responsividade em viewport mobile |
+| `npm run test:pwa` | App sem internet, no build real |
 
-```bash
-npm run dev
-```
+Para o E2E e o PWA, rode `npx playwright install chromium` uma vez. Os testes usam portas próprias, não reaproveitam servidores abertos e bloqueiam chamadas ao Firebase real.
 
-Abra o endereco mostrado no terminal (normalmente `http://localhost:5173`).
-
-## Scripts disponiveis
-
-- `npm run dev`: inicia ambiente de desenvolvimento
-- `npm run build`: gera build de producao
-- `npm run build:dev`: gera build em modo development
-- `npm run preview`: sobe servidor para visualizar o build
-- `npm run lint`: executa ESLint
-- `npm run test`: executa testes uma vez
-- `npm run test:watch`: executa testes em modo observacao
-- `npm run typecheck`: verifica os tipos
-- `npm run test:rules`: testa as regras do Firestore no emulador (exige Java)
-- `npm run test:e2e`: testa o fluxo principal em viewport mobile, nos emuladores (exige Java e `npx playwright install chromium`)
-
-## Estrutura principal
+## Estrutura
 
 ```txt
 src/
-  components/      # componentes de UI e fluxo de treino
-  contexts/        # contexto de autenticacao
-  data/            # definicao dos treinos e repositorios do Firestore
-  domain/          # regras de negocio em funcoes puras, com testes
-  hooks/           # hooks de auth e persistencia
-  lib/             # integracoes (Firebase, utils)
-  pages/           # paginas principais
-tests/rules/       # testes de seguranca do Firestore
-e2e/               # testes de ponta a ponta
-docs/              # diagnostico, roadmap e registro das fases
+  components/         componentes de interface
+  contexts/           contextos de autenticação e treino em andamento
+  data/repositories/  único ponto de acesso ao Firestore
+  domain/             regras de negócio em funções puras, com testes
+  hooks/              estado de tela e consultas
+  lib/                integrações e utilitários
+  pages/              telas
+tests/rules/          testes de segurança do Firestore
+e2e/                  testes de ponta a ponta
+e2e-pwa/              testes do app instalado e sem internet
+docs/                 diagnóstico, decisões e registro das fases
+firestore.rules       regras de acesso, versionadas
 ```
 
-## Deploy
+## Publicar
 
-O projeto possui `public/_redirects`, facilitando deploy em plataformas estaticas com SPA (ex.: Netlify).
+O app é um site estático: o comando de build é `npm ci && npm run build`, e a pasta publicada é `dist`. Rotas precisam de um rewrite de `/*` para `/index.html`.
 
-Fluxo recomendado:
+**Sempre publique `firestore.rules` antes do app.** O passo a passo, o que falta antes de abrir ao público e como voltar atrás estão em [docs/fase-6-lancamento.md](docs/fase-6-lancamento.md).
 
-1. `npm run build`
-2. Publicar o conteudo da pasta `dist`
+## Documentação
 
-## Roadmap
-
-Veja [docs/diagnostico-e-roadmap.md](docs/diagnostico-e-roadmap.md) e o registro das fases em [docs/fase-2-fundacao.md](docs/fase-2-fundacao.md), [docs/fase-3-produto.md](docs/fase-3-produto.md), [docs/fase-4-experiencia.md](docs/fase-4-experiencia.md) e [docs/fase-5-comercializacao.md](docs/fase-5-comercializacao.md).
+- [Diagnóstico e roadmap](docs/diagnostico-e-roadmap.md)
+- [Fase 2: fundação](docs/fase-2-fundacao.md)
+- [Fase 3: produto](docs/fase-3-produto.md)
+- [Fase 4: experiência](docs/fase-4-experiencia.md)
+- [Fase 5: comercialização](docs/fase-5-comercializacao.md)
+- [Fase 6: lançamento](docs/fase-6-lancamento.md)
+- [ADR 001: pagamentos](docs/adr/001-pagamentos.md)

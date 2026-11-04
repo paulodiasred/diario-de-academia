@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
   Trash2,
@@ -89,11 +88,7 @@ const MeusTreinos = () => {
   return (
     <>
       <div className="min-h-screen p-4 pb-24 max-w-md mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
+        <div className="space-y-6">
           <Cabecalho
             titulo="Meus Treinos"
             subtitulo={`${todosTreinos.length} treino${todosTreinos.length !== 1 ? "s" : ""} salvo${todosTreinos.length !== 1 ? "s" : ""}`}
@@ -136,23 +131,19 @@ const MeusTreinos = () => {
           )}
 
           {/* Lista de treinos */}
-          <AnimatePresence>
+          <>
             {todosTreinos.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center py-16 space-y-3"
-              >
+              <div className="text-center py-16 space-y-3">
                 <p className="text-muted-foreground">
                   Você ainda não tem treinos salvos.
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Crie seu primeiro treino personalizado!
                 </p>
-              </motion.div>
+              </div>
             ) : (
               <div className="space-y-3">
-                {treinos.map((treino, index) => {
+                {treinos.map((treino) => {
                   const musculos = [
                     ...new Set(
                       treino.exercicios.flatMap((e) => e.primaryMuscles)
@@ -164,14 +155,7 @@ const MeusTreinos = () => {
                   ];
 
                   return (
-                    <motion.div
-                      key={treino.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -100 }}
-                      transition={{ delay: index * 0.04 }}
-                      className="glass-card rounded-xl p-4 space-y-3"
-                    >
+                    <div key={treino.id} className="glass-card rounded-xl p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-foreground truncate">
@@ -259,13 +243,13 @@ const MeusTreinos = () => {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
             )}
-          </AnimatePresence>
-        </motion.div>
+          </>
+        </div>
       </div>
 
       <AlertDialog
