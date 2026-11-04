@@ -39,7 +39,8 @@ export function historicoEmCsv(sessoes: Sessao[]): string {
           i + 1,
           serie.peso,
           serie.reps,
-          serie.duracaoSeg === null ? null : serie.duracaoSeg / 60,
+          // Duas casas: 20 s vira 0,33 minuto, não 0,3333333333333333.
+          serie.duracaoSeg === null ? null : Math.round((serie.duracaoSeg / 60) * 100) / 100,
           serie.distanciaM,
           exercicio.notas || null,
         ]);

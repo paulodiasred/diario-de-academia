@@ -1,5 +1,5 @@
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { lazy, Suspense, useLayoutEffect } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigationType } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { TelaCarregando } from "@/components/Estados";
 import { SessaoAtivaProvider } from "@/components/SessaoAtivaProvider";
@@ -19,12 +19,25 @@ const Conta = lazy(() => import("./pages/Conta"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+/** Tela nova começa no topo. Voltar (POP) mantém a posição em que a pessoa estava. */
+function RolarAoTopo() {
+  const { pathname } = useLocation();
+  const tipo = useNavigationType();
+
+  useLayoutEffect(() => {
+    if (tipo !== "POP") window.scrollTo(0, 0);
+  }, [pathname, tipo]);
+
+  return null;
+}
+
 function Conteudo() {
   const { user, novoCadastro } = useAuth();
   useMigracaoLegado(user?.uid);
 
   return (
     <BrowserRouter>
+      <RolarAoTopo />
       <main>
         <Suspense fallback={<TelaCarregando />}>
           {novoCadastro ? (

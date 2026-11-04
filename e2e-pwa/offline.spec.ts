@@ -25,7 +25,7 @@ async function criarContaETreino(page: Page) {
   await page.locator("#signup-password").fill(SENHA);
   await page.getByRole("button", { name: "Criar Conta" }).click();
   await page.getByRole("button", { name: "Pular" }).click();
-  await expect(page.getByRole("button", { name: "Sair" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ajustes" })).toBeVisible();
 
   await page.goto("/meus-treinos/criar");
   await page.getByPlaceholder("Ex: Peito e Tríceps").fill("Treino offline");
@@ -88,7 +88,7 @@ test("abre, treina e finaliza sem internet, e sincroniza ao voltar", async ({ pa
   await expect.poll(() => miniatura.evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   await page.getByRole("button", { name: "Descartar treino" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Descartar" }).click();
-  await expect(page.getByRole("button", { name: "Sair" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ajustes" })).toBeVisible();
 
   await context.setOffline(true);
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -184,7 +185,10 @@ const Exercicios = () => {
             <AlertDialogAction
               className="bg-destructive hover:bg-destructive/90"
               onClick={() => {
-                if (excluindo) excluir(excluindo.id);
+                if (excluindo) {
+                  excluir(excluindo.id);
+                  toast.success("Exercício excluído");
+                }
                 setExcluindo(null);
               }}
             >

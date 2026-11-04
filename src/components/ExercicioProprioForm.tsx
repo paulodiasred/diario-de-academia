@@ -69,6 +69,7 @@ export function ExercicioProprioForm({ aberto, exercicio, onFechar, onSalvo }: E
       );
       onSalvo?.(salvo);
       onFechar();
+      toast.success(exercicio ? "Exercício atualizado" : "Exercício criado");
     } catch (erro) {
       toast.error(
         erro instanceof z.ZodError

@@ -31,7 +31,7 @@ async function criarConta(page: Page) {
   await page.locator("#signup-password").fill(SENHA);
   await page.getByRole("button", { name: "Criar Conta" }).click();
   await page.getByRole("button", { name: "Pular" }).click();
-  await expect(page.getByRole("button", { name: "Sair" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ajustes" })).toBeVisible();
   return email;
 }
 
@@ -40,7 +40,7 @@ async function entrar(page: Page, email: string) {
   await page.locator("#signin-email").fill(email);
   await page.locator("#signin-password").fill(SENHA);
   await page.getByRole("button", { name: "Entrar", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Sair" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ajustes" })).toBeVisible();
 }
 
 async function adicionarDoCatalogo(page: Page, nome: string) {
@@ -773,8 +773,13 @@ test.describe("conta", () => {
     await peso(page, 1).fill("20");
     await concluir(page, 1);
 
-    await page.goto("/");
-    await page.getByRole("button", { name: "Sair" }).click();
+    await page.goto("/conta");
+    await page.getByRole("button", { name: "Sair da conta" }).click();
+    // Sair pede confirmação, e cancelar mantém a conta aberta.
+    await page.getByRole("alertdialog").getByRole("button", { name: "Cancelar" }).click();
+    await expect(page.getByRole("heading", { name: "Minha conta" })).toBeVisible();
+    await page.getByRole("button", { name: "Sair da conta" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Sair", exact: true }).click();
     await expect(page.locator("#signin-email")).toBeVisible();
     // O logout recarrega a página: repete até a leitura pegar a página nova.
     await expect(async () => {
@@ -825,6 +830,160 @@ test("celular: nenhuma tela principal tem rolagem horizontal", async ({ page }) 
     );
     expect(sobra, `rolagem horizontal em ${rota}`).toBeLessThanOrEqual(0);
   }
+});
+
+test.describe("confiança nos dados", () => {
+  async function treinoFinalizado(page: Page) {
+    await criarConta(page);
+    await criarTreino(page);
+    await page.goto("/meus-treinos");
+    await iniciar(page);
+    await peso(page, 1).fill("20");
+    await reps(page, 1).fill("10");
+    await concluir(page, 1);
+    await finalizar(page);
+  }
+
+  test("corrigir um peso no histórico atualiza o resumo e a evolução", async ({ page }) => {
+    await treinoFinalizado(page);
+    await expect(page.getByText("200 kg")).toBeVisible();
+
+    await page.getByRole("button", { name: "Corrigir" }).click();
+    const painel = page.getByRole("dialog");
+    await painel.getByLabel("Peso (kg)").fill("30");
+    await painel.getByRole("button", { name: "Salvar correção" }).click();
+    await expect(page.getByText("Treino corrigido")).toBeVisible();
+    await expect(page.getByText("300 kg")).toBeVisible();
+
+    // Vale depois de recarregar: foi gravado, não só alterado na tela.
+    await page.reload();
+    await expect(page.getByText("300 kg")).toBeVisible();
+    await page.goto("/evolucao");
+    await expect(page.getByText(/melhor carga 30 kg/)).toBeVisible();
+  });
+
+  test("correção inválida não é salva, e cancelar não deixa sobra", async ({ page }) => {
+    await treinoFinalizado(page);
+    await page.getByRole("button", { name: "Corrigir" }).click();
+    const painel = page.getByRole("dialog");
+    await painel.getByLabel("Repetições").fill("");
+    await painel.getByRole("button", { name: "Salvar correção" }).click();
+    await expect(page.getByText("Informe as repetições desta série")).toBeVisible();
+    await expect(painel.getByLabel("Repetições")).toHaveAttribute("aria-invalid", "true");
+
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Corrigir" }).click();
+    await expect(page.getByRole("dialog").getByLabel("Repetições")).toHaveValue("10");
+  });
+
+  test("excluir treino pede confirmação, some do histórico e pode ser desfeito", async ({ page }) => {
+    await treinoFinalizado(page);
+    await page.getByRole("button", { name: "Excluir treino" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Cancelar" }).click();
+    await expect(page.getByText("Treino concluído")).toBeVisible();
+
+    await page.getByRole("button", { name: "Excluir treino" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Excluir", exact: true }).click();
+    await expect(page.getByText("Treino excluído")).toBeVisible();
+    await page.getByRole("button", { name: "Desfazer" }).click();
+    await expect(page.getByRole("heading", { name: "Último treino" })).toBeVisible();
+
+    await page.getByRole("button", { name: /Treino de teste/ }).click();
+    await page.getByRole("button", { name: "Excluir treino" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Excluir", exact: true }).click();
+    await expect(page.getByText("Treino excluído")).toBeVisible();
+    await page.goto("/evolucao");
+    await expect(page.getByText("Sua evolução começa no primeiro treino")).toBeVisible();
+  });
+
+  test("sair do formulário alterado pede confirmação, e o rascunho sobrevive à recarga", async ({ page }) => {
+    await criarConta(page);
+    await page.goto("/meus-treinos/criar");
+    // Sem alterações, voltar não pergunta nada.
+    await page.getByRole("button", { name: "Voltar" }).click();
+    await expect(page.getByRole("heading", { name: "Meus Treinos" })).toBeVisible();
+
+    await page.goto("/meus-treinos/criar");
+    const nome = page.getByPlaceholder("Ex: Peito e Tríceps");
+    await nome.fill("Treino quase perdido");
+    await page.getByRole("button", { name: "Voltar" }).click();
+    const dialogo = page.getByRole("alertdialog");
+    await dialogo.getByRole("button", { name: "Continuar editando" }).click();
+    await expect(nome).toHaveValue("Treino quase perdido");
+
+    // É o que protege o voltar do celular, que não dá para interceptar.
+    await page.reload();
+    await expect(nome).toHaveValue("Treino quase perdido");
+    await expect(page.getByText("Rascunho recuperado")).toBeVisible();
+
+    await page.getByRole("button", { name: "Voltar" }).click();
+    await dialogo.getByRole("button", { name: "Sair sem salvar" }).click();
+    await expect(page.getByRole("heading", { name: "Meus Treinos" })).toBeVisible();
+    await page.goto("/meus-treinos/criar");
+    await expect(nome).toHaveValue("");
+  });
+
+  test("salvar confirma na tela e limpa o rascunho", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page);
+    await expect(page.getByText("Treino criado")).toBeVisible();
+    const rascunhos = await page.evaluate(() =>
+      Object.keys(localStorage).filter((c) => c.startsWith("diario:treino-em-edicao:")),
+    );
+    expect(rascunhos).toEqual([]);
+  });
+
+  test("excluir um treino da lista pode ser desfeito", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page);
+    await page.getByRole("button", { name: "Excluir Treino de teste" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Excluir", exact: true }).click();
+    await expect(page.getByText("Você ainda não tem treinos salvos.")).toBeVisible();
+    await page.getByRole("button", { name: "Desfazer" }).click();
+    await expect(page.getByRole("heading", { name: "Treino de teste" })).toBeVisible();
+  });
+
+  test("trocar de aba abre a tela nova no topo", async ({ page }) => {
+    await criarConta(page);
+    await page.goto("/exercicios");
+    await expect(page.getByRole("heading", { name: "Exercícios" })).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 2000));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(1000);
+
+    await page.getByRole("button", { name: "Treinos", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Meus Treinos" })).toBeVisible();
+    await page.getByRole("button", { name: "Exercícios", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Exercícios" })).toBeVisible();
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  });
+
+  test("planilha sem treinos avisa em vez de baixar um arquivo vazio", async ({ page }) => {
+    await criarConta(page);
+    await page.goto("/conta");
+    let baixou = false;
+    page.on("download", () => {
+      baixou = true;
+    });
+    await page.getByRole("button", { name: /Histórico em planilha/ }).click();
+    await expect(page.getByText("Você ainda não tem treinos finalizados para exportar.")).toBeVisible();
+    expect(baixou).toBe(false);
+  });
+
+  test("o eixo do gráfico não corta os números", async ({ page }) => {
+    await treinoFinalizado(page);
+    await page.getByRole("button", { name: "Concluir", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Volume por semana" })).toBeVisible();
+    await page.waitForSelector(".recharts-yAxis text");
+    const cortados = await page.evaluate(() =>
+      [...document.querySelectorAll(".recharts-yAxis text")]
+        .filter((t) => {
+          const svg = (t as SVGTextElement).ownerSVGElement as SVGSVGElement;
+          return t.getBoundingClientRect().left < svg.getBoundingClientRect().left;
+        })
+        .map((t) => t.textContent),
+    );
+    expect(cortados).toEqual([]);
+  });
 });
 
 test.describe("lançamento", () => {

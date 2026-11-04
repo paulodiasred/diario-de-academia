@@ -7,6 +7,7 @@ import {
   atualizarSerie,
   contarSeriesPendentes,
   criarSessao,
+  descreverSerie,
   duracaoDaSessao,
   finalizarSessao,
   historicoDoExercicio,
@@ -14,12 +15,101 @@ import {
   pausarDescanso,
   pontosEvolucao,
   removerSerie,
+  removerSerieDoHistorico,
   resumirSessao,
   retomarDescanso,
   segundosRestantes,
   temSerieConcluida,
+  validarCorrecao,
   type Sessao,
+  type SerieSessao,
 } from "./sessao";
+
+describe("descrição da série com tempo", () => {
+  const serie = (parcial: Partial<SerieSessao>): SerieSessao => ({
+    peso: null,
+    reps: null,
+    duracaoSeg: null,
+    distanciaM: null,
+    concluida: true,
+    concluidaEm: null,
+    editada: false,
+    ...parcial,
+  });
+
+  it("não arredonda segundos para minutos (45 s não vira 1 min, 20 s não vira 0 min)", () => {
+    expect(descreverSerie(serie({ duracaoSeg: 45 }), "tempo")).toBe("0:45");
+    expect(descreverSerie(serie({ duracaoSeg: 20 }), "tempo")).toBe("0:20");
+    expect(descreverSerie(serie({ duracaoSeg: 90 }), "tempo")).toBe("1:30");
+  });
+
+  it("mostra horas quando passa de 60 minutos e combina com a distância", () => {
+    expect(descreverSerie(serie({ duracaoSeg: 3900 }), "tempo")).toBe("1:05:00");
+    expect(descreverSerie(serie({ duracaoSeg: 1800, distanciaM: 5000 }), "distancia")).toBe("30:00 × 5000 m");
+  });
+
+  it("cardio sem tempo informado continua como feito", () => {
+    expect(descreverSerie(serie({}), "tempo")).toBe("Feito");
+  });
+});
+
+describe("correção de treino finalizado", () => {
+  const serieFeita = (parcial: Partial<SerieSessao> = {}): SerieSessao => ({
+    peso: 50,
+    reps: 10,
+    duracaoSeg: null,
+    distanciaM: null,
+    concluida: true,
+    concluidaEm: "2026-11-03T18:10:00.000Z",
+    editada: false,
+    ...parcial,
+  });
+  const sessaoFinalizada = (parcial: Partial<Sessao> = {}, series = [serieFeita(), serieFeita()]): Sessao => ({
+    id: "s1",
+    treinoId: "t1",
+    nome: "Peito",
+    iniciadaEm: "2026-11-03T18:00:00.000Z",
+    finalizadaEm: "2026-11-03T19:00:00.000Z",
+    origem: "app",
+    notas: "",
+    exercicioAtual: 0,
+    descanso: null,
+    atualizadaEm: "2026-11-03T19:00:00.000Z",
+    exercicios: [
+      { exercicioId: "supino", nome: "Supino", medida: "carga_reps", descanso: 60, primaryMuscles: ["chest"], notas: "", series },
+    ],
+    ...parcial,
+  });
+
+  it("corrigir um peso errado derruba o recorde falso", () => {
+    const anterior = sessaoFinalizada({ id: "s0", iniciadaEm: "2026-10-01T18:00:00.000Z", finalizadaEm: "2026-10-01T19:00:00.000Z" });
+    const errada = sessaoFinalizada({}, [serieFeita({ peso: 500 })]);
+    expect(resumirSessao(errada, [anterior, errada]).recordes).toHaveLength(1);
+    const corrigida = atualizarSerie(errada, 0, 0, { peso: 52.5 });
+    const recordes = resumirSessao(corrigida, [anterior, corrigida]).recordes;
+    expect(recordes.map((r) => r.peso)).toEqual([52.5]);
+  });
+
+  it("remover a última série tira o exercício do treino", () => {
+    const uma = removerSerieDoHistorico(sessaoFinalizada(), 0, 0);
+    expect(uma.exercicios[0].series).toHaveLength(1);
+    expect(removerSerieDoHistorico(uma, 0, 0).exercicios).toHaveLength(0);
+  });
+
+  it("aponta a primeira série inválida", () => {
+    const sessao = sessaoFinalizada({}, [serieFeita(), serieFeita({ reps: null })]);
+    expect(validarCorrecao(sessao)).toEqual({ exercicio: 0, serie: 1, erro: "reps" });
+    expect(validarCorrecao(sessaoFinalizada({}, [serieFeita({ peso: 3000 })]))?.erro).toBe("peso");
+    expect(validarCorrecao(sessaoFinalizada())).toBeNull();
+  });
+
+  it("registro antigo pode continuar sem repetições, mas não com carga absurda", () => {
+    const sem = sessaoFinalizada({ origem: "legado" }, [serieFeita({ reps: null })]);
+    expect(validarCorrecao(sem)).toBeNull();
+    const absurda = sessaoFinalizada({ origem: "legado" }, [serieFeita({ peso: 3000, reps: null })]);
+    expect(validarCorrecao(absurda)?.erro).toBe("peso");
+  });
+});
 
 const INICIO = new Date("2026-11-03T18:00:00Z");
 

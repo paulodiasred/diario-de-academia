@@ -18,6 +18,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { AuthContext } from '@/contexts/AuthContext';
+import { limparRascunhosFormulario } from '@/data/repositories/rascunhoFormulario';
 import { codigoDoErro } from '@/domain/errosAuth';
 
 // Importações sob demanda: o banco só carrega depois do login, para abrir mais rápido.
@@ -28,6 +29,7 @@ async function encerrarNoAparelho() {
   const { limparRascunhosLocais } = await carregarRascunho();
   const { limparDadosLocais } = await carregarFirestore();
   limparRascunhosLocais();
+  limparRascunhosFormulario();
   try {
     await limparDadosLocais();
   } catch (error) {

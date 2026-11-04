@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { descreverSerie, type CamposSerie, type SerieSessao } from "@/domain/sessao";
+import { paraNumeroOuNulo } from "@/domain/texto";
 import type { TipoMedida } from "@/types/catalogo";
 
 interface LinhaSerieProps {
@@ -13,12 +14,6 @@ interface LinhaSerieProps {
   onMudar: (campos: CamposSerie) => void;
   onAlternar: () => void;
 }
-
-const paraNumero = (texto: string): number | null => {
-  if (texto.trim() === "") return null;
-  const valor = Number(texto.replace(",", "."));
-  return Number.isFinite(valor) && valor >= 0 ? valor : null;
-};
 
 /** Mesmas colunas de LinhaSerie, para o rótulo ficar sobre o campo certo. */
 export function CabecalhoSeries({ medida }: { medida: TipoMedida }) {
@@ -64,7 +59,7 @@ function Campo({ rotulo, valor, desativado, decimal = true, onMudar }: CampoProp
       aria-label={rotulo}
       value={valor ?? ""}
       disabled={desativado}
-      onChange={(e) => onMudar(paraNumero(e.target.value))}
+      onChange={(e) => onMudar(paraNumeroOuNulo(e.target.value))}
       onFocus={(e) => e.target.select()}
       className="h-12 min-w-0 flex-1 text-center text-xl font-bold tabular-nums bg-secondary/40 px-1 disabled:opacity-100 disabled:border-transparent disabled:bg-transparent"
     />

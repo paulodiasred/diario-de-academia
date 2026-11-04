@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useRef } from "react";
+import { lazy, Suspense, useCallback, useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowDown, ArrowLeft, ArrowUp, Plus, Trash2, Save, BookOpen, Calendar } from "lucide-react";
 import { TelaCarregando } from "@/components/Estados";
@@ -6,10 +6,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ErrorState } from "@/components/ErrorState";
 import { ImagemExercicio } from "@/components/ImagemExercicio";
+import {
+  esquecerRascunhoFormulario,
+  guardarRascunhoFormulario,
+  lerRascunhoFormulario,
+  type ValoresFormularioTreino,
+} from "@/data/repositories/rascunhoFormulario";
 import { LimiteDoPlano } from "@/domain/planos";
 import { medidaDoExercicio } from "@/domain/sessao";
+import { useAuth } from "@/hooks/useAuth";
 import { useMeusTreinos } from "@/hooks/useMeusTreinos";
 import type { ExercicioCatalogo, ExercicioNoTreino, TipoMedida } from "@/types/catalogo";
 import {
@@ -72,6 +89,9 @@ const paraNumeroOpcional = (texto: string): number | undefined => {
   return Number.isFinite(valor) && valor >= 0 ? valor : undefined;
 };
 
+const FORMULARIO_VAZIO: ValoresFormularioTreino = { nome: "", descricao: "", dias: [], exercicios: [] };
+const serializar = (valores: ValoresFormularioTreino) => JSON.stringify(valores);
+
 /** Reordena e mantém `ordem` igual à posição. */
 function mover(lista: ExercicioNoTreino[], origem: number, destino: number): ExercicioNoTreino[] {
   if (destino < 0 || destino >= lista.length) return lista;
@@ -86,6 +106,8 @@ const CriarEditarTreino = () => {
   const { id } = useParams<{ id?: string }>();
   const isEdicao = !!id;
 
+  const { user } = useAuth();
+  const uid = user?.uid;
   const { treinos, loading, erro, recarregar, criarTreino, atualizarTreino } = useMeusTreinos();
 
   const [nome, setNome] = useState("");
@@ -95,20 +117,77 @@ const CriarEditarTreino = () => {
   const [catalogoAberto, setCatalogoAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [catalogoCarregado, setCatalogoCarregado] = useState(false);
+  const [confirmarSaida, setConfirmarSaida] = useState(false);
+  const [preenchido, setPreenchido] = useState(false);
   const formularioPreenchido = useRef(false);
+  // O que está salvo: é a comparação com ele que diz se há algo a perder.
+  const valoresIniciais = useRef(serializar(FORMULARIO_VAZIO));
+  const versao = useRef<string | null>(null);
+
+  const aplicar = useCallback((valores: ValoresFormularioTreino) => {
+    setNome(valores.nome);
+    setDescricao(valores.descricao);
+    setDias(valores.dias);
+    setExercicios(valores.exercicios);
+  }, []);
 
   // Preenche uma única vez: recarregar a lista não pode apagar o que está sendo editado.
   useEffect(() => {
-    if (!isEdicao || formularioPreenchido.current) return;
-    const treino = treinos.find((t) => t.id === id);
-    if (treino) {
-      formularioPreenchido.current = true;
-      setNome(treino.nome);
-      setDescricao(treino.descricao ?? "");
-      setDias(treino.dias ?? []);
-      setExercicios([...treino.exercicios].sort((a, b) => a.ordem - b.ordem));
+    if (!uid || formularioPreenchido.current) return;
+    const treino = isEdicao ? treinos.find((t) => t.id === id) : undefined;
+    if (isEdicao && !treino) return;
+    formularioPreenchido.current = true;
+
+    const iniciais: ValoresFormularioTreino = treino
+      ? {
+          nome: treino.nome,
+          descricao: treino.descricao ?? "",
+          dias: treino.dias ?? [],
+          exercicios: [...treino.exercicios].sort((a, b) => a.ordem - b.ordem),
+        }
+      : FORMULARIO_VAZIO;
+    valoresIniciais.current = serializar(iniciais);
+    versao.current = treino?.atualizadoEm ?? null;
+
+    const salvo = lerRascunhoFormulario(uid, id);
+    const aproveitavel = salvo && salvo.versao === versao.current;
+    aplicar(aproveitavel ? salvo.valores : iniciais);
+    if (aproveitavel) {
+      toast("Rascunho recuperado", {
+        duration: 6000,
+        action: {
+          label: "Descartar",
+          onClick: () => aplicar(iniciais),
+        },
+      });
     }
-  }, [id, isEdicao, treinos]);
+    setPreenchido(true);
+  }, [aplicar, id, isEdicao, treinos, uid]);
+
+  const temAlteracoes =
+    preenchido && serializar({ nome, descricao, dias, exercicios }) !== valoresIniciais.current;
+
+  useEffect(() => {
+    if (!uid || !preenchido) return;
+    if (temAlteracoes) {
+      guardarRascunhoFormulario(uid, id, {
+        valores: { nome, descricao, dias, exercicios },
+        versao: versao.current,
+      });
+    } else {
+      esquecerRascunhoFormulario(uid, id);
+    }
+  }, [uid, id, preenchido, temAlteracoes, nome, descricao, dias, exercicios]);
+
+  const voltar = () => {
+    if (temAlteracoes) setConfirmarSaida(true);
+    else navigate("/meus-treinos");
+  };
+
+  const sairSemSalvar = () => {
+    if (uid) esquecerRascunhoFormulario(uid, id);
+    navigate("/meus-treinos");
+  };
 
   useEffect(() => {
     if (catalogoAberto) setCatalogoCarregado(true);
@@ -166,6 +245,8 @@ const CriarEditarTreino = () => {
       } else {
         await criarTreino(dados);
       }
+      if (uid) esquecerRascunhoFormulario(uid, id);
+      toast.success(isEdicao ? "Treino atualizado" : "Treino criado");
       navigate("/meus-treinos");
     } catch (erro) {
       if (erro instanceof LimiteDoPlano) navigate("/planos");
@@ -214,7 +295,7 @@ const CriarEditarTreino = () => {
             variant="ghost"
             size="icon"
             aria-label="Voltar"
-            onClick={() => navigate("/meus-treinos")}
+            onClick={voltar}
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -495,6 +576,26 @@ const CriarEditarTreino = () => {
           )}
         </div>
       </div>
+
+      <AlertDialog open={confirmarSaida} onOpenChange={setConfirmarSaida}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sair sem salvar?</AlertDialogTitle>
+            <AlertDialogDescription>
+              As alterações feitas neste treino serão perdidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar editando</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={sairSemSalvar}
+            >
+              Sair sem salvar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {catalogoCarregado && (
         <Suspense fallback={null}>

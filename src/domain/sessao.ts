@@ -1,5 +1,5 @@
 import type { ExercicioNoTreino, TipoMedida, TreinoPersonalizado } from "@/types/catalogo";
-import { formatarKg } from "./texto";
+import { formatarKg, formatarTempo } from "./texto";
 
 export interface SerieSessao {
   peso: number | null;
@@ -329,6 +329,40 @@ export function finalizarSessao(sessao: Sessao, agora: Date = new Date()): Sessa
   };
 }
 
+// ---------- Correção de treino já finalizado ----------
+
+/** A série sai do histórico. O exercício que fica sem séries sai junto. */
+export function removerSerieDoHistorico(sessao: Sessao, exercicio: number, serie: number): Sessao {
+  return {
+    ...sessao,
+    exercicios: sessao.exercicios
+      .map((e, i) => (i === exercicio ? { ...e, series: e.series.filter((_, j) => j !== serie) } : e))
+      .filter((e) => e.series.length > 0),
+  };
+}
+
+export interface ErroCorrecao {
+  exercicio: number;
+  serie: number;
+  erro: Exclude<ErroSerie, null>;
+}
+
+/**
+ * A primeira série inválida. Registros antigos nunca tiveram repetições:
+ * eles continuam podendo ficar sem, para corrigir só a carga.
+ */
+export function validarCorrecao(sessao: Sessao): ErroCorrecao | null {
+  for (const [exercicio, e] of sessao.exercicios.entries()) {
+    for (const [serie, s] of e.series.entries()) {
+      const erro = validarSerie(s, e.medida);
+      if (!erro) continue;
+      if (erro === "reps" && s.reps === null && sessao.origem === "legado") continue;
+      return { exercicio, serie, erro };
+    }
+  }
+  return null;
+}
+
 export function duracaoDaSessao(sessao: Sessao): number | null {
   // Registros antigos não têm início e fim reais: a duração não é estimada.
   if (sessao.origem === "legado" || !sessao.finalizadaEm) return null;
@@ -449,9 +483,7 @@ export function historicoDoExercicio(
 
 export function descreverSerie(serie: SerieSessao, medida: TipoMedida): string {
   const partes: string[] = [];
-  if (medida === "tempo" || serie.duracaoSeg !== null) {
-    if (serie.duracaoSeg !== null) partes.push(`${Math.round(serie.duracaoSeg / 60)} min`);
-  }
+  if (serie.duracaoSeg !== null) partes.push(formatarTempo(serie.duracaoSeg));
   if (serie.distanciaM !== null) partes.push(`${serie.distanciaM} m`);
   if (medida === "carga_reps" || serie.peso !== null) {
     if (serie.peso !== null && serie.peso > 0) partes.push(formatarKg(serie.peso));

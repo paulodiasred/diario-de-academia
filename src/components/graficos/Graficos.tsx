@@ -37,6 +37,10 @@ const estiloTooltip = {
 
 const compacto = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
 
+// Sem margem negativa: ela cortava o eixo, e "16,5 mil" aparecia como "6,5 mil".
+const MARGEM = { top: 8, right: 8, bottom: 0, left: 0 };
+const LARGURA_EIXO_Y = 56;
+
 export interface PontoGrafico {
   rotulo: string;
   valor: number;
@@ -98,12 +102,12 @@ export function GraficoLinha(props: GraficoProps) {
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={dados}
-            margin={{ top: 8, right: 8, bottom: 0, left: -16 }}
+            margin={MARGEM}
             accessibilityLayer
           >
             <CartesianGrid vertical={false} stroke={COR_GRADE} />
             <XAxis dataKey="rotulo" {...eixo} minTickGap={16} />
-            <YAxis {...eixo} domain={["auto", "auto"]} tickFormatter={(v) => compacto.format(v)} />
+            <YAxis {...eixo} width={LARGURA_EIXO_Y} domain={["auto", "auto"]} tickFormatter={(v) => compacto.format(v)} />
             <Tooltip
               {...estiloTooltip}
               cursor={{ stroke: COR_TEXTO, strokeWidth: 1 }}
@@ -150,13 +154,13 @@ export function GraficoColunas(props: GraficoProps) {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={dados}
-            margin={{ top: 8, right: 8, bottom: 0, left: -16 }}
+            margin={MARGEM}
             barCategoryGap={4}
             accessibilityLayer
           >
             <CartesianGrid vertical={false} stroke={COR_GRADE} />
             <XAxis dataKey="rotulo" {...eixo} minTickGap={8} />
-            <YAxis {...eixo} allowDecimals={false} tickFormatter={(v) => compacto.format(v)} />
+            <YAxis {...eixo} width={LARGURA_EIXO_Y} allowDecimals={false} tickFormatter={(v) => compacto.format(v)} />
             <Tooltip
               {...estiloTooltip}
               cursor={{ fill: COR_GRADE, fillOpacity: 0.4 }}

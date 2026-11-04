@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ChevronRight, Download, Lock, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, Download, Lock, LogOut, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -18,8 +18,10 @@ import { mensagemErroAuth } from "@/domain/errosAuth";
 import { historicoEmCsv, relatorioPorExercicioEmCsv } from "@/domain/exportacao";
 import { chaveDiaLocal } from "@/domain/datas";
 import { LIMITES_GRATUITO } from "@/domain/planos";
+import type { Sessao } from "@/domain/sessao";
 import { useAuth } from "@/hooks/useAuth";
 import { usePlano } from "@/hooks/usePlano";
+import { useSessaoAtiva } from "@/hooks/useSessaoAtiva";
 import { useSessoes } from "@/hooks/useSessoes";
 import { baixarArquivo } from "@/lib/utils";
 
@@ -27,10 +29,13 @@ const CONFIRMACAO = "EXCLUIR";
 
 const Conta = () => {
   const navigate = useNavigate();
-  const { user, excluirConta, reenviarVerificacao } = useAuth();
+  const { user, logout, excluirConta, reenviarVerificacao } = useAuth();
   const { premium, uso } = usePlano();
-  const { sessoes } = useSessoes();
+  const { sessoes, loading: carregandoHistorico, erro: erroHistorico, recarregar } = useSessoes();
+  const { sessao: treinoEmAndamento } = useSessaoAtiva();
   const [exportando, setExportando] = useState(false);
+  const [confirmarSaida, setConfirmarSaida] = useState(false);
+  const [saindo, setSaindo] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
   const [dialogoAberto, setDialogoAberto] = useState(false);
   const [confirmacao, setConfirmacao] = useState("");
@@ -38,6 +43,36 @@ const Conta = () => {
 
   const usaSenha = user?.providerData.some((p) => p.providerId === "password") ?? false;
   const hoje = chaveDiaLocal();
+
+  /** Nunca entrega arquivo vazio como se fosse o histórico: quem baixa confia nele como cópia. */
+  const baixarPlanilha = async (nome: string, gerar: (lista: Sessao[]) => string) => {
+    let lista = sessoes;
+    if (erroHistorico) {
+      const nova = await recarregar();
+      if (nova.isError || !nova.data) {
+        toast.error("Não foi possível carregar seu histórico. Confira a conexão e tente de novo.");
+        return;
+      }
+      lista = nova.data;
+    }
+    if (!lista.some((s) => s.finalizadaEm)) {
+      toast("Você ainda não tem treinos finalizados para exportar.");
+      return;
+    }
+    baixarArquivo(nome, gerar(lista), "text/csv;charset=utf-8");
+  };
+
+  const sair = async () => {
+    setSaindo(true);
+    try {
+      await logout();
+    } catch (erro) {
+      console.error("Erro ao sair:", erro);
+      toast.error(erro instanceof Error ? erro.message : "Não foi possível sair");
+      setSaindo(false);
+      setConfirmarSaida(false);
+    }
+  };
 
   const exportarTudo = async () => {
     if (!user) return;
@@ -122,10 +157,11 @@ const Conta = () => {
           <Button
             variant="outline"
             className="w-full h-11 gap-1.5"
-            onClick={() => baixarArquivo(`historico-${hoje}.csv`, historicoEmCsv(sessoes), "text/csv;charset=utf-8")}
+            disabled={carregandoHistorico}
+            onClick={() => void baixarPlanilha(`historico-${hoje}.csv`, historicoEmCsv)}
           >
             <Download className="w-4 h-4" />
-            Histórico em planilha (CSV)
+            {carregandoHistorico ? "Carregando histórico..." : "Histórico em planilha (CSV)"}
           </Button>
           <Button variant="outline" className="w-full h-11 gap-1.5" disabled={exportando} onClick={exportarTudo}>
             <Download className="w-4 h-4" />
@@ -135,9 +171,8 @@ const Conta = () => {
             <Button
               variant="outline"
               className="w-full h-11 gap-1.5"
-              onClick={() =>
-                baixarArquivo(`relatorio-exercicios-${hoje}.csv`, relatorioPorExercicioEmCsv(sessoes), "text/csv;charset=utf-8")
-              }
+              disabled={carregandoHistorico}
+              onClick={() => void baixarPlanilha(`relatorio-exercicios-${hoje}.csv`, relatorioPorExercicioEmCsv)}
             >
               <Download className="w-4 h-4" />
               Relatório por exercício (CSV)
@@ -150,6 +185,11 @@ const Conta = () => {
           )}
         </div>
       </section>
+
+      <Button variant="outline" className="w-full h-11 gap-1.5" onClick={() => setConfirmarSaida(true)}>
+        <LogOut className="w-4 h-4" />
+        Sair da conta
+      </Button>
 
       <section aria-label="Excluir conta" className="space-y-2">
         <h2 className="font-semibold">Excluir conta</h2>
@@ -174,6 +214,26 @@ const Conta = () => {
           Política de privacidade
         </a>
       </nav>
+
+      <AlertDialog open={confirmarSaida} onOpenChange={setConfirmarSaida}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sair da conta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {treinoEmAndamento
+                ? `Seus dados ficam salvos, e "${treinoEmAndamento.nome}" continua em andamento quando você entrar de novo. Depois de sair, o app precisa de internet para abrir.`
+                : "Seus dados ficam salvos na conta. Depois de sair, o app precisa de internet para abrir."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saindo}>Cancelar</AlertDialogCancel>
+            {/* Button comum: se ainda houver séries sem sincronizar, o aviso aparece antes de fechar. */}
+            <Button disabled={saindo} onClick={() => void sair()}>
+              {saindo ? "Saindo..." : "Sair"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={dialogoAberto} onOpenChange={setDialogoAberto}>
         <AlertDialogContent>

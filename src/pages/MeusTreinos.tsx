@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -34,6 +34,9 @@ const MeusTreinos = () => {
   const { treinos: todosTreinos, loading, erro, recarregar, deletarTreino, criarTreino } =
     useMeusTreinos();
   const plano = usePlano();
+  // O Desfazer roda depois da exclusão: precisa da contagem do plano já com a vaga devolvida.
+  const criarTreinoAtual = useRef(criarTreino);
+  criarTreinoAtual.current = criarTreino;
   const [deletandoId, setDeletandoId] = useState<string | null>(null);
   const [musculo, setMusculo] = useState("");
 
@@ -53,16 +56,37 @@ const MeusTreinos = () => {
         dias: [],
         exercicios: treino.exercicios,
       });
+      toast.success("Cópia criada, sem dias definidos");
     } catch (erro) {
       if (erro instanceof LimiteDoPlano) navigate("/planos");
       toast.error(erro instanceof LimiteDoPlano ? erro.message : "Não foi possível duplicar o treino");
     }
   };
 
+  const desfazerExclusao = async (treino: TreinoPersonalizado) => {
+    try {
+      await criarTreinoAtual.current({
+        nome: treino.nome,
+        descricao: treino.descricao,
+        dias: treino.dias,
+        exercicios: treino.exercicios,
+      });
+    } catch (erro) {
+      toast.error(erro instanceof LimiteDoPlano ? erro.message : "Não foi possível recuperar o treino");
+    }
+  };
+
   const handleDeletar = async () => {
     if (!deletandoId) return;
+    const excluido = todosTreinos.find((t) => t.id === deletandoId);
     try {
       await deletarTreino(deletandoId);
+      if (excluido) {
+        toast.success("Treino excluído", {
+          duration: 6000,
+          action: { label: "Desfazer", onClick: () => void desfazerExclusao(excluido) },
+        });
+      }
     } catch {
       toast.error("Erro ao excluir treino");
     } finally {

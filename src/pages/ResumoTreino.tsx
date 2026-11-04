@@ -1,9 +1,20 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
-import { Share2, Trophy } from "lucide-react";
+import { Pencil, Share2, Trash2, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { textoParaCompartilhar } from "@/domain/exportacao";
 import { TelaCarregando } from "@/components/Estados";
+import { CorrigirTreinoSheet } from "@/components/treino/CorrigirTreinoSheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ErrorState";
 import { descreverSerie, resumirSessao } from "@/domain/sessao";
@@ -15,7 +26,10 @@ const ResumoTreino = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const deHistorico = (useLocation().state as { deHistorico?: boolean } | null)?.deHistorico;
-  const { sessoes, loading, erro, recarregar } = useSessoes();
+  const { sessoes, loading, erro, recarregar, corrigirSessao, removerSessao, restaurarSessao } = useSessoes();
+  const [corrigindo, setCorrigindo] = useState(false);
+  const [confirmarExclusao, setConfirmarExclusao] = useState(false);
+  const saindo = useRef(false);
 
   const sessao = sessoes.find((s) => s.id === id);
   const resumo = useMemo(
@@ -38,7 +52,21 @@ const ResumoTreino = () => {
     );
   }
 
-  if (!sessao || !resumo) return <Navigate to="/" replace />;
+  if (!sessao || !resumo) return saindo.current ? null : <Navigate to="/" replace />;
+
+  const sair = () => (deHistorico ? navigate(-1) : navigate("/", { replace: true }));
+
+  const excluir = () => {
+    const excluida = sessao;
+    // Antes de tirar da lista: sem o treino, esta tela mandaria para o início.
+    saindo.current = true;
+    sair();
+    removerSessao(excluida.id);
+    toast.success("Treino excluído", {
+      duration: 6000,
+      action: { label: "Desfazer", onClick: () => restaurarSessao(excluida) },
+    });
+  };
 
   const compartilhar = async () => {
     const texto = textoParaCompartilhar(sessao, resumo);
@@ -109,17 +137,57 @@ const ResumoTreino = () => {
         ))}
       </section>
 
-      <Button variant="outline" className="w-full h-11 gap-1.5" onClick={compartilhar}>
-        <Share2 className="w-4 h-4" />
-        Compartilhar
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" className="h-11 gap-1.5" onClick={() => setCorrigindo(true)}>
+          <Pencil className="w-4 h-4" />
+          Corrigir
+        </Button>
+        <Button variant="outline" className="h-11 gap-1.5" onClick={compartilhar}>
+          <Share2 className="w-4 h-4" />
+          Compartilhar
+        </Button>
+      </div>
+
+      <Button className="w-full h-12" onClick={sair}>
+        {deHistorico ? "Voltar" : "Concluir"}
       </Button>
 
       <Button
-        className="w-full h-12"
-        onClick={() => (deHistorico ? navigate(-1) : navigate("/", { replace: true }))}
+        variant="ghost"
+        className="w-full h-11 gap-1.5 text-destructive"
+        onClick={() => setConfirmarExclusao(true)}
       >
-        {deHistorico ? "Voltar" : "Concluir"}
+        <Trash2 className="w-4 h-4" />
+        Excluir treino
       </Button>
+
+      <CorrigirTreinoSheet
+        sessao={sessao}
+        aberto={corrigindo}
+        onFechar={() => setCorrigindo(false)}
+        onSalvar={(corrigida) => {
+          corrigirSessao(corrigida);
+          setCorrigindo(false);
+          toast.success("Treino corrigido");
+        }}
+      />
+
+      <AlertDialog open={confirmarExclusao} onOpenChange={setConfirmarExclusao}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir este treino?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ele sai do histórico, e recordes, gráficos e metas são recalculados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={excluir}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

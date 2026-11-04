@@ -1,7 +1,6 @@
 import { Suspense, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Flame, LogOut, Plus, Settings, Trophy } from "lucide-react";
-import { toast } from "sonner";
+import { ChevronRight, Flame, Plus, Settings, Trophy } from "lucide-react";
 import { AjustesSheet } from "@/components/AjustesSheet";
 import { Cabecalho } from "@/components/Cabecalho";
 import { EstadoVazio, TelaCarregando } from "@/components/Estados";
@@ -33,7 +32,7 @@ const quandoEm = (emDias: number, dia: string) => {
 
 const Index = () => {
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
   const treinos = useMeusTreinos();
   const { sessoes, loading, erro, recarregar } = useSessoes();
   const { metaSemanal } = usePerfil();
@@ -50,15 +49,6 @@ const Index = () => {
       volume: semanasRecentes(sessoes, agora).map((s) => ({ rotulo: s.rotulo, valor: s.volumeKg })),
     };
   }, [sessoes, treinos.treinos]);
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error("Erro ao fazer logout:", error);
-      toast.error(error instanceof Error ? error.message : "Não foi possível sair");
-    }
-  };
 
   if (treinos.erro || erro) {
     return (
@@ -98,15 +88,6 @@ const Index = () => {
           onClick={() => setAjustesAbertos(true)}
         >
           <Settings className="w-5 h-5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-11 w-11"
-          aria-label="Sair"
-          onClick={handleLogout}
-        >
-          <LogOut className="w-5 h-5" />
         </Button>
       </Cabecalho>
 

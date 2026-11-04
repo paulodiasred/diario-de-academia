@@ -60,6 +60,16 @@ export function gravarSessaoFinalizada(uid: string, sessao: Sessao): Promise<voi
   return lote.commit();
 }
 
+/** Correção de um treino finalizado, ou a volta de um que acabou de ser excluído. */
+export function regravarSessao(uid: string, sessao: Sessao): Promise<void> {
+  return setDoc(doc(colecaoSessoes(uid), sessao.id), sessaoParaDocumento(sessao));
+}
+
+/** Só o treino sai do histórico. Os `registros` antigos, de onde ele veio, ficam como estão. */
+export function excluirSessao(uid: string, id: string): Promise<void> {
+  return deleteDoc(doc(colecaoSessoes(uid), id));
+}
+
 // ---------- Treino em andamento ----------
 
 export async function lerRascunhoRemoto(uid: string): Promise<Sessao | null> {
