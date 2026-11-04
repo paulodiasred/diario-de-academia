@@ -12,6 +12,10 @@ service cloud.firestore {
       return logado() && dados.userId == request.auth.uid;
     }
 
+    function ehOUsuario(uid) {
+      return logado() && request.auth.uid == uid;
+    }
+
     function registroValido(d) {
       return d.keys().hasAll(['userId', 'exercicio', 'peso', 'serie', 'dia', 'data'])
         && d.keys().hasOnly(['userId', 'exercicio', 'peso', 'serie', 'dia', 'data', 'concluida'])
@@ -33,19 +37,152 @@ service cloud.firestore {
         && d.atualizadoEm is timestamp;
     }
 
+    function sessaoValida(d) {
+      return d.keys().hasAll(['treinoId', 'nome', 'iniciadaEm', 'finalizadaEm', 'origem', 'notas', 'exercicios', 'atualizadaEm'])
+        && d.keys().hasOnly(['treinoId', 'nome', 'iniciadaEm', 'finalizadaEm', 'origem', 'notas', 'exercicios', 'atualizadaEm', 'legadoIds'])
+        && d.nome is string && d.nome.size() > 0 && d.nome.size() <= 120
+        && d.iniciadaEm is timestamp
+        && d.finalizadaEm is timestamp
+        && d.finalizadaEm >= d.iniciadaEm
+        && d.origem in ['app', 'legado']
+        && d.notas is string && d.notas.size() <= 5000
+        && d.exercicios is list && d.exercicios.size() <= 100;
+    }
+
+    function rascunhoValido(d) {
+      return d.id is string
+        && d.nome is string && d.nome.size() <= 120
+        && d.exercicios is list && d.exercicios.size() <= 100;
+    }
+
+    function exercicioProprioValido(d) {
+      return d.keys().hasAll(['name', 'category', 'medida', 'primaryMuscles'])
+        && d.keys().hasOnly(['name', 'category', 'equipment', 'medida', 'primaryMuscles', 'secondaryMuscles', 'instructions', 'atualizadoEm'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 120
+        && d.medida in ['carga_reps', 'peso_corporal', 'tempo', 'distancia']
+        && d.primaryMuscles is list && d.primaryMuscles.size() > 0 && d.primaryMuscles.size() <= 5
+        && d.get('secondaryMuscles', []) is list && d.get('secondaryMuscles', []).size() <= 10
+        && d.get('instructions', []) is list && d.get('instructions', []).size() <= 30;
+    }
+
+    function metaValida(d) {
+      return d.keys().hasAll(['tipo', 'alvo', 'criadaEm'])
+        && d.keys().hasOnly(['tipo', 'alvo', 'criadaEm', 'exercicioNome'])
+        && d.tipo in ['carga', 'treinos_mes', 'volume_mes']
+        && d.alvo is number && d.alvo > 0 && d.alvo <= 100000000
+        && d.criadaEm is timestamp
+        && d.get('exercicioNome', '') is string && d.get('exercicioNome', '').size() <= 200;
+    }
+
+    function valorAntes(campo) {
+      return resource == null ? 0 : resource.data.get(campo, 0);
+    }
+
+    // +1 com o documento nascendo neste lote, ou -1 com ele sumindo. O outro campo não muda.
+    function mudouContador(uid, campo, outro, documento) {
+      let novo = request.resource.data.get(campo, 0);
+      return request.resource.data.get(outro, 0) == valorAntes(outro)
+        && ((novo == valorAntes(campo) + 1 && !exists(documento) && existsAfter(documento))
+          || (novo == valorAntes(campo) - 1 && novo >= 0 && exists(documento) && !existsAfter(documento)));
+    }
+
+    // ---------- Plano e limites ----------
+    // Limites espelhados em src/domain/planos.ts. Altere os dois juntos.
+    function premium(uid) {
+      let caminho = /databases/$(database)/documents/entitlements/$(uid);
+      return exists(caminho)
+        && get(caminho).data.plano == 'premium'
+        && (!('expiraEm' in get(caminho).data) || get(caminho).data.expiraEm > request.time);
+    }
+
+    function caminhoContadores(uid) {
+      return /databases/$(database)/documents/users/$(uid)/uso/contadores;
+    }
+
+    // Quem cria precisa somar 1 ao contador no mesmo lote, e o total respeita o plano.
+    function contouCriacao(uid, campo, limite) {
+      let antes = exists(caminhoContadores(uid)) ? get(caminhoContadores(uid)).data.get(campo, 0) : 0;
+      return existsAfter(caminhoContadores(uid))
+        && getAfter(caminhoContadores(uid)).data.get(campo, 0) == antes + 1
+        && (premium(uid) || antes + 1 <= limite);
+    }
+
+    // As rotinas do treino fixo antigo são criadas pela migração e não ocupam vaga.
+    // O ID fechado limita isso às cinco rotinas, sem brecha para criar treinos à vontade.
+    function rotinaDaMigracao(id) {
+      return id.matches('fixo-' + request.auth.uid + '-(segunda|terca|quarta|quinta|sexta)');
+    }
+
+    // Coleção antiga. O app atual só lê; criar e apagar seguem liberados para versões em cache.
     match /registros/{id} {
       allow read, delete: if dono(resource.data);
       allow create: if dono(request.resource.data) && registroValido(request.resource.data);
-      // O app nunca edita um registro: corrigir é apagar e registrar de novo.
       allow update: if false;
     }
 
     match /treinos/{id} {
       allow read, delete: if dono(resource.data);
-      allow create: if dono(request.resource.data) && treinoValido(request.resource.data);
+      allow create: if dono(request.resource.data) && treinoValido(request.resource.data)
+        && (rotinaDaMigracao(id) || contouCriacao(request.auth.uid, 'treinos', 4));
       allow update: if dono(resource.data)
         && request.resource.data.userId == resource.data.userId
         && treinoValido(request.resource.data);
+    }
+
+    // Só o servidor concede plano: nenhuma escrita passa daqui.
+    match /entitlements/{uid} {
+      allow read: if ehOUsuario(uid);
+      allow write: if false;
+    }
+
+    match /users/{uid} {
+      allow read: if ehOUsuario(uid);
+      // Lista fechada de campos: o plano nunca poderá ser gravado pelo cliente.
+      allow create, update: if ehOUsuario(uid)
+        && request.resource.data.keys().hasOnly(['migracaoLegadoEm', 'metaSemanal', 'vinculosExercicios'])
+        && request.resource.data.get('migracaoLegadoEm', request.time) is timestamp
+        && request.resource.data.get('metaSemanal', 1) is int
+        && request.resource.data.get('metaSemanal', 1) >= 1
+        && request.resource.data.get('metaSemanal', 1) <= 7
+        && request.resource.data.get('vinculosExercicios', {}) is map
+        && request.resource.data.get('vinculosExercicios', {}).size() <= 500;
+      allow delete: if ehOUsuario(uid);
+
+      match /sessions/{id} {
+        allow read, delete: if ehOUsuario(uid);
+        allow create, update: if ehOUsuario(uid) && sessaoValida(request.resource.data);
+      }
+
+      match /exercises/{id} {
+        allow read, delete: if ehOUsuario(uid);
+        allow create: if ehOUsuario(uid) && exercicioProprioValido(request.resource.data)
+          && contouCriacao(uid, 'exercicios', 10);
+        allow update: if ehOUsuario(uid) && exercicioProprioValido(request.resource.data);
+      }
+
+      // Metas personalizadas são do Premium. Ver e apagar nunca é bloqueado: os dados são do usuário.
+      match /metas/{id} {
+        allow read, delete: if ehOUsuario(uid);
+        allow create: if ehOUsuario(uid) && metaValida(request.resource.data) && premium(uid);
+        allow update: if false;
+      }
+
+      // Só muda junto com a criação ou exclusão real do documento, nunca sozinho.
+      // Não pode ser apagado: apagar zeraria a contagem e burlaria o limite.
+      match /uso/{id} {
+        allow read: if ehOUsuario(uid) && id == 'contadores';
+        allow create, update: if ehOUsuario(uid) && id == 'contadores'
+          && request.resource.data.keys().hasOnly(['treinos', 'exercicios', 'ultimoId'])
+          && request.resource.data.ultimoId is string
+          && (mudouContador(uid, 'treinos', 'exercicios', /databases/$(database)/documents/treinos/$(request.resource.data.ultimoId))
+            || mudouContador(uid, 'exercicios', 'treinos', /databases/$(database)/documents/users/$(uid)/exercises/$(request.resource.data.ultimoId)));
+        allow delete: if false;
+      }
+
+      match /activeSession/{id} {
+        allow read, delete: if ehOUsuario(uid) && id == 'current';
+        allow create, update: if ehOUsuario(uid) && id == 'current' && rascunhoValido(request.resource.data);
+      }
     }
 
     // Tudo que não foi liberado acima é negado.

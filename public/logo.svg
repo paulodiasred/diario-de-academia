@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Diário de Academia">
+  <rect width="512" height="512" rx="112" fill="#17171a"/>
+  <g fill="#b5f127" transform="rotate(-45 256 256)">
+    <rect x="166" y="236" width="180" height="40" rx="8"/>
+    <rect x="118" y="168" width="56" height="176" rx="18"/>
+    <rect x="338" y="168" width="56" height="176" rx="18"/>
+    <rect x="72" y="204" width="36" height="104" rx="14"/>
+    <rect x="404" y="204" width="36" height="104" rx="14"/>
+  </g>
+</svg>

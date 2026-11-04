@@ -10,6 +10,28 @@ export interface ExercicioCatalogo {
   instructions: string[];
   category: string;
   images: string[];
+  /** Exercício criado pelo usuário. */
+  proprio?: boolean;
+  medida?: TipoMedida;
+}
+
+/** Como uma série é medida. Treinos antigos não têm o campo: veja `medidaDoExercicio`. */
+export type TipoMedida = "carga_reps" | "peso_corporal" | "tempo" | "distancia";
+
+export const MEDIDA_LABEL: Record<TipoMedida, string> = {
+  carga_reps: "Carga e repetições",
+  peso_corporal: "Peso corporal",
+  tempo: "Tempo",
+  distancia: "Distância",
+};
+
+export function medidaPadraoDoCatalogo(
+  ex: Pick<ExercicioCatalogo, "category" | "equipment" | "medida">,
+): TipoMedida {
+  if (ex.medida) return ex.medida;
+  if (ex.category === "cardio" || ex.category === "stretching") return "tempo";
+  if (ex.equipment === "body only") return "peso_corporal";
+  return "carga_reps";
 }
 
 export interface ExercicioNoTreino {
@@ -21,6 +43,12 @@ export interface ExercicioNoTreino {
   descanso: number;
   ordem: number;
   images?: string[];
+  medida?: TipoMedida;
+  repsAlvo?: number;
+  cargaAlvo?: number;
+  duracaoAlvoSeg?: number;
+  distanciaAlvoM?: number;
+  circuito?: string[];
 }
 
 export interface TreinoPersonalizado {

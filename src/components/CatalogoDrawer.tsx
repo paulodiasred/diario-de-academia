@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Search, X, Plus, ChevronDown } from "lucide-react";
+import { Check, Search, X, Plus, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getExerciseImageUrl } from "@/lib/utils";
+import { ImagemExercicio } from "@/components/ImagemExercicio";
+import { ExercicioProprioForm } from "@/components/ExercicioProprioForm";
 import {
   Sheet,
   SheetContent,
@@ -10,7 +11,6 @@ import {
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -55,6 +55,7 @@ export function CatalogoDrawer({
 
   const [expandido, setExpandido] = useState<string | null>(null);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [criando, setCriando] = useState(false);
 
   const temFiltros =
     filtros.categoria ||
@@ -66,7 +67,7 @@ export function CatalogoDrawer({
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="bottom"
-        className="h-[92vh] flex flex-col p-0 rounded-t-3xl"
+        className="h-[92vh] flex flex-col p-0 rounded-t-2xl"
       >
         <SheetHeader className="px-4 pt-5 pb-3 border-b border-border/50">
           <SheetTitle className="text-left text-lg font-bold">
@@ -104,7 +105,16 @@ export function CatalogoDrawer({
             <Button
               variant="outline"
               size="sm"
-              className="text-xs h-8 gap-1"
+              className="text-[13px] h-9 gap-1"
+              onClick={() => setCriando(true)}
+            >
+              <Plus className="w-3 h-3" />
+              Criar exercício
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-[13px] h-9 gap-1"
               onClick={() => setMostrarFiltros((v) => !v)}
             >
               <ChevronDown
@@ -119,7 +129,7 @@ export function CatalogoDrawer({
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs h-8 text-muted-foreground"
+                className="text-[13px] h-8 text-muted-foreground"
                 onClick={limparFiltros}
               >
                 Limpar
@@ -145,7 +155,7 @@ export function CatalogoDrawer({
                       }))
                     }
                   >
-                    <SelectTrigger className="h-8 text-xs bg-secondary/30">
+                    <SelectTrigger className="h-8 text-[13px] bg-secondary/30">
                       <SelectValue placeholder="Categoria" />
                     </SelectTrigger>
                     <SelectContent>
@@ -167,7 +177,7 @@ export function CatalogoDrawer({
                       }))
                     }
                   >
-                    <SelectTrigger className="h-8 text-xs bg-secondary/30">
+                    <SelectTrigger className="h-8 text-[13px] bg-secondary/30">
                       <SelectValue placeholder="Músculo" />
                     </SelectTrigger>
                     <SelectContent>
@@ -189,7 +199,7 @@ export function CatalogoDrawer({
                       }))
                     }
                   >
-                    <SelectTrigger className="h-8 text-xs bg-secondary/30">
+                    <SelectTrigger className="h-8 text-[13px] bg-secondary/30">
                       <SelectValue placeholder="Nível" />
                     </SelectTrigger>
                     <SelectContent>
@@ -211,7 +221,7 @@ export function CatalogoDrawer({
                       }))
                     }
                   >
-                    <SelectTrigger className="h-8 text-xs bg-secondary/30">
+                    <SelectTrigger className="h-8 text-[13px] bg-secondary/30">
                       <SelectValue placeholder="Equipamento" />
                     </SelectTrigger>
                     <SelectContent>
@@ -234,7 +244,6 @@ export function CatalogoDrawer({
           <div className="px-4 py-2 space-y-2">
             {exerciciosFiltrados.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <p className="text-4xl mb-3">🔍</p>
                 <p>Nenhum exercício encontrado</p>
                 <Button
                   variant="ghost"
@@ -253,69 +262,36 @@ export function CatalogoDrawer({
                 return (
                   <div
                     key={ex.id}
-                    className="glass-card rounded-2xl overflow-hidden"
+                    className="border-b border-border/60 last:border-0"
                   >
                     <div
-                      className="p-3 flex items-start gap-3"
+                      className="py-3 flex items-center gap-3"
                       onClick={() =>
                         setExpandido(aberto ? null : ex.id)
                       }
                     >
                       {/* Thumbnail */}
-                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-secondary/50 shrink-0">
-                        {ex.images && ex.images[0] ? (
-                          <img
-                            src={getExerciseImageUrl(ex.images[0])}
-                            alt={ex.name}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                            onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).style.display = "none";
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-2xl">
-                            🏋️
-                          </div>
-                        )}
-                      </div>
+                      <ImagemExercicio caminho={ex.images?.[0]} alt="" className="w-14 h-14 shrink-0" />
 
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm leading-tight">
                           {ex.name}
                         </p>
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                          {ex.primaryMuscles.slice(0, 2).map((m) => (
-                            <Badge
-                              key={m}
-                              variant="secondary"
-                              className="text-xs px-1.5 py-0"
-                            >
-                              {MUSCULO_LABEL[m] ?? m}
-                            </Badge>
-                          ))}
-                          {ex.level && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs px-1.5 py-0"
-                            >
-                              {NIVEL_LABEL[ex.level] ?? ex.level}
-                            </Badge>
-                          )}
-                          {ex.equipment && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs px-1.5 py-0 text-muted-foreground"
-                            >
-                              {EQUIPAMENTO_LABEL[ex.equipment] ?? ex.equipment}
-                            </Badge>
-                          )}
-                        </div>
+                        <p className="mt-0.5 text-[13px] text-muted-foreground">
+                          {[
+                            ex.proprio ? "Seu" : null,
+                            ...ex.primaryMuscles.slice(0, 2).map((m) => MUSCULO_LABEL[m] ?? m),
+                            ex.proprio ? null : (NIVEL_LABEL[ex.level] ?? ex.level),
+                            ex.equipment ? (EQUIPAMENTO_LABEL[ex.equipment] ?? ex.equipment) : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
                       </div>
                       <Button
                         size="sm"
-                        variant={jaAdicionado ? "secondary" : "default"}
-                        className="shrink-0 h-8 w-8 p-0 rounded-xl"
+                        variant="secondary"
+                        className="shrink-0 h-11 w-11 p-0"
                         aria-label={`Adicionar ${ex.name}`}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -323,7 +299,7 @@ export function CatalogoDrawer({
                         }}
                         disabled={jaAdicionado}
                       >
-                        <Plus className="w-4 h-4" />
+                        {jaAdicionado ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                       </Button>
                     </div>
 
@@ -338,29 +314,31 @@ export function CatalogoDrawer({
                           <div className="px-3 pb-3 border-t border-border/30 pt-2">
                             {/* Imagens do exercício */}
                             {ex.images && ex.images.length > 0 && (
-                              <div className="flex gap-2 mb-3">
+                              <div className="grid grid-cols-2 gap-2 mb-3">
                                 {ex.images.map((img, i) => (
-                                  <img
-                                    key={i}
-                                  src={getExerciseImageUrl(img)}
-                                  alt={`${ex.name} ${i + 1}`}
-                                    className="w-28 h-20 object-cover rounded-xl bg-secondary/50"
-                                    loading="lazy"
-                                    onError={(e) => {
-                                      (e.currentTarget as HTMLImageElement).style.display = "none";
-                                    }}
+                                  <ImagemExercicio
+                                    key={img}
+                                    caminho={img}
+                                    alt={`${ex.name}, ${i === 0 ? "início" : "fim"} do movimento`}
+                                    className="w-full aspect-square"
                                   />
                                 ))}
                               </div>
                             )}
-                            <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
+                            {ex.secondaryMuscles.length > 0 && (
+                              <p className="text-[13px] text-muted-foreground mb-2">
+                                Secundários:{" "}
+                                {ex.secondaryMuscles.map((m) => MUSCULO_LABEL[m] ?? m).join(", ")}
+                              </p>
+                            )}
+                            <p className="text-[13px] font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
                               Como executar
                             </p>
                             <ol className="space-y-1">
                               {ex.instructions.map((step, i) => (
                                 <li
                                   key={i}
-                                  className="text-xs text-muted-foreground flex gap-2"
+                                  className="text-sm flex gap-2"
                                 >
                                   <span className="text-primary font-bold shrink-0">
                                     {i + 1}.
@@ -378,13 +356,18 @@ export function CatalogoDrawer({
               })
             )}
             {exerciciosFiltrados.length > 100 && (
-              <p className="text-center text-xs text-muted-foreground py-3">
+              <p className="text-center text-[13px] text-muted-foreground py-3">
                 Mostrando 100 de {total}. Refine a busca para ver mais.
               </p>
             )}
           </div>
         </ScrollArea>
       </SheetContent>
+      <ExercicioProprioForm
+        aberto={criando}
+        onFechar={() => setCriando(false)}
+        onSalvo={onAdicionar}
+      />
     </Sheet>
   );
 }

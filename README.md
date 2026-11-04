@@ -127,4 +127,4 @@ Fluxo recomendado:
 
 ## Roadmap
 
-Veja [docs/diagnostico-e-roadmap.md](docs/diagnostico-e-roadmap.md) e o registro da fase atual em [docs/fase-2-fundacao.md](docs/fase-2-fundacao.md).
+Veja [docs/diagnostico-e-roadmap.md](docs/diagnostico-e-roadmap.md) e o registro das fases em [docs/fase-2-fundacao.md](docs/fase-2-fundacao.md), [docs/fase-3-produto.md](docs/fase-3-produto.md), [docs/fase-4-experiencia.md](docs/fase-4-experiencia.md) e [docs/fase-5-comercializacao.md](docs/fase-5-comercializacao.md).

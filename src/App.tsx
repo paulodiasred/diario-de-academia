@@ -3,17 +3,29 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthForm } from "@/components/AuthForm";
 import { BottomNav } from "@/components/BottomNav";
+import { ThemeProvider } from "next-themes";
+import { MotionConfig } from "framer-motion";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { TelaCarregando } from "@/components/Estados";
+import { SessaoAtivaProvider } from "@/components/SessaoAtivaProvider";
+import { useMigracaoLegado } from "@/hooks/useMigracaoLegado";
 
 const Index = lazy(() => import("./pages/Index"));
 const MeusTreinos = lazy(() => import("./pages/MeusTreinos"));
 const CriarEditarTreino = lazy(() => import("./pages/CriarEditarTreino"));
-const TreinoPersonalizadoSession = lazy(() => import("./pages/TreinoPersonalizadoSession"));
+const Treino = lazy(() => import("./pages/Treino"));
+const ResumoTreino = lazy(() => import("./pages/ResumoTreino"));
+const Exercicios = lazy(() => import("./pages/Exercicios"));
+const Evolucao = lazy(() => import("./pages/Evolucao"));
+const EvolucaoExercicio = lazy(() => import("./pages/EvolucaoExercicio"));
+const Planos = lazy(() => import("./pages/Planos"));
+const Conta = lazy(() => import("./pages/Conta"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -29,16 +41,11 @@ const queryClient = new QueryClient({
   },
 });
 
-const Carregando = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-  </div>
-);
-
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, novoCadastro } = useAuth();
+  useMigracaoLegado(user?.uid);
 
-  if (loading) return <Carregando />;
+  if (loading) return <TelaCarregando />;
 
   if (!user) {
     return <AuthForm />;
@@ -46,33 +53,49 @@ function AppContent() {
 
   return (
     <BrowserRouter>
-      <Suspense fallback={<Carregando />}>
+      <Suspense fallback={<TelaCarregando />}>
+        {novoCadastro ? <Onboarding /> : (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/meus-treinos" element={<MeusTreinos />} />
           <Route path="/meus-treinos/criar" element={<CriarEditarTreino />} />
           <Route path="/meus-treinos/editar/:id" element={<CriarEditarTreino />} />
-          <Route path="/meus-treinos/:id" element={<TreinoPersonalizadoSession />} />
+          {/* Endereço antigo da tela de treino: pode estar em favoritos. */}
+          <Route path="/meus-treinos/:id" element={<Navigate to="/meus-treinos" replace />} />
+          <Route path="/treino" element={<Treino />} />
+          <Route path="/treino/resumo/:id" element={<ResumoTreino />} />
+          <Route path="/exercicios" element={<Exercicios />} />
+          <Route path="/planos" element={<Planos />} />
+          <Route path="/conta" element={<Conta />} />
+          <Route path="/evolucao" element={<Evolucao />} />
+          <Route path="/evolucao/exercicio/:nome" element={<EvolucaoExercicio />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        )}
       </Suspense>
-      <BottomNav />
+      {!novoCadastro && <BottomNav />}
     </BrowserRouter>
   );
 }
 
 const App = () => (
   <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AppContent />
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+      <MotionConfig reducedMotion="user">
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <SessaoAtivaProvider>
+                <AppContent />
+              </SessaoAtivaProvider>
+            </TooltipProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </MotionConfig>
+    </ThemeProvider>
   </ErrorBoundary>
 );
 

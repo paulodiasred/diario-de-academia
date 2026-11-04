@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizarRegistro, normalizarTreino } from "./schemas";
+import { normalizarExercicioProprio, normalizarTreino } from "./schemas";
 
 const exercicio = {
   exercicioId: "x",
@@ -41,23 +41,25 @@ describe("normalizarTreino (regressão B1)", () => {
   });
 });
 
-describe("normalizarRegistro", () => {
-  const valido = { exercicio: "Supino", peso: 50, serie: 1, dia: "Segunda" };
+describe("normalizarExercicioProprio", () => {
+  const valido = {
+    name: " Meu exercício ",
+    category: "strength",
+    equipment: null,
+    medida: "carga_reps" as const,
+    primaryMuscles: ["chest"],
+  };
 
-  it("marca como concluída por padrão", () => {
-    expect(normalizarRegistro(valido).concluida).toBe(true);
+  it("remove espaços e preenche listas vazias", () => {
+    expect(normalizarExercicioProprio(valido)).toMatchObject({
+      name: "Meu exercício",
+      secondaryMuscles: [],
+      instructions: [],
+    });
   });
 
-  it("aceita peso 0, usado pelo cardio", () => {
-    expect(normalizarRegistro({ ...valido, peso: 0, serie: 0 }).peso).toBe(0);
-  });
-
-  it.each([
-    ["peso negativo", { peso: -1 }],
-    ["peso absurdo", { peso: 2001 }],
-    ["série fracionada", { serie: 1.5 }],
-    ["exercício vazio", { exercicio: "" }],
-  ])("rejeita %s", (_nome, alteracao) => {
-    expect(() => normalizarRegistro({ ...valido, ...alteracao })).toThrow();
+  it("exige nome e músculo principal", () => {
+    expect(() => normalizarExercicioProprio({ ...valido, name: "  " })).toThrow();
+    expect(() => normalizarExercicioProprio({ ...valido, primaryMuscles: [] })).toThrow();
   });
 });

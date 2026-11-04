@@ -1,17 +1,17 @@
 import {
   collection,
-  deleteDoc,
   doc,
   getDocs,
   query,
-  setDoc,
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { TreinoPersonalizado } from "@/types/catalogo";
 import { normalizarTreino, type TreinoInput } from "@/domain/schemas";
+import { ajustarContadorNoLote } from "./planoRepository";
 import { paraIso } from "./registrosRepository";
 
 export async function listarTreinos(uid: string): Promise<TreinoPersonalizado[]> {
@@ -41,9 +41,14 @@ export function criarTreino(uid: string, input: TreinoInput): GravacaoTreino {
   const ref = doc(collection(db, "treinos"));
   const agora = Timestamp.now();
   const iso = agora.toDate().toISOString();
+
+  const lote = writeBatch(db);
+  lote.set(ref, { ...dados, userId: uid, criadoEm: agora, atualizadoEm: agora });
+  ajustarContadorNoLote(lote, uid, "treinos", 1, ref.id);
+
   return {
     treino: { ...dados, id: ref.id, userId: uid, criadoEm: iso, atualizadoEm: iso },
-    confirmacao: setDoc(ref, { ...dados, userId: uid, criadoEm: agora, atualizadoEm: agora }),
+    confirmacao: lote.commit(),
   };
 }
 
@@ -56,6 +61,10 @@ export function atualizarTreino(id: string, input: TreinoInput) {
   };
 }
 
-export function excluirTreino(id: string): Promise<void> {
-  return deleteDoc(doc(db, "treinos", id));
+/** `descontar`: devolve a vaga do plano. Treinos antigos e migrados nunca ocuparam uma. */
+export function excluirTreino(uid: string, id: string, descontar: boolean): Promise<void> {
+  const lote = writeBatch(db);
+  lote.delete(doc(db, "treinos", id));
+  if (descontar) ajustarContadorNoLote(lote, uid, "treinos", -1, id);
+  return lote.commit();
 }

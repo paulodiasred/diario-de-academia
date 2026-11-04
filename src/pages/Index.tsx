@@ -1,42 +1,55 @@
-import { useState, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Dumbbell,
-  Flame,
-  ArrowLeft,
-  ChevronRight,
-  LogOut,
-  ListChecks,
-} from "lucide-react";
+import { ChevronRight, Flame, LogOut, Plus, Settings, Trophy } from "lucide-react";
 import { toast } from "sonner";
-import { treino, dias, grupoIcons } from "@/data/treino";
-import { exercicioConcluidoHoje } from "@/domain/registros";
-import { useTreinoStorage } from "@/hooks/useTreinoStorage";
-import { useAuth } from "@/hooks/useAuth";
+import { AjustesSheet } from "@/components/AjustesSheet";
+import { Cabecalho } from "@/components/Cabecalho";
+import { EstadoVazio, TelaCarregando } from "@/components/Estados";
 import { ErrorState } from "@/components/ErrorState";
-import { ExerciseCard } from "@/components/ExerciseCard";
-import { ExerciseDetail } from "@/components/ExerciseDetail";
+import { GraficoColunas } from "@/components/graficos";
+import { Indicador } from "@/components/Indicador";
+import { BannerSessaoAtiva } from "@/components/treino/BannerSessaoAtiva";
+import { BotaoIniciarTreino } from "@/components/treino/BotaoIniciarTreino";
 import { Button } from "@/components/ui/button";
-import { gerarTreinoComId, ExercicioInstanciado } from "@/data/treino";
+import {
+  proximoTreino,
+  recordesBatidos,
+  resumoDoMes,
+  semanasRecentes,
+  sequenciaDeSemanas,
+  treinosDaSemana,
+} from "@/domain/estatisticas";
+import { formatarDuracao, formatarKg } from "@/domain/texto";
+import { useAuth } from "@/hooks/useAuth";
+import { useMeusTreinos } from "@/hooks/useMeusTreinos";
+import { usePerfil } from "@/hooks/usePerfil";
+import { useSessoes } from "@/hooks/useSessoes";
+
+const quandoEm = (emDias: number, dia: string) => {
+  if (emDias === 0) return "Hoje";
+  if (emDias === 1) return "Amanhã";
+  return dia;
+};
 
 const Index = () => {
   const navigate = useNavigate();
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [exercicioSelecionado, setExercicioSelecionado] =
-    useState<ExercicioInstanciado | null>(null);
-
-  const {
-    salvarRegistro,
-    getRegistrosPorExercicio,
-    getUltimoPeso,
-    loading,
-    erro,
-    recarregar,
-    removerRegistro,
-    registros,
-  } = useTreinoStorage();
   const { logout, user } = useAuth();
+  const treinos = useMeusTreinos();
+  const { sessoes, loading, erro, recarregar } = useSessoes();
+  const { metaSemanal } = usePerfil();
+  const [ajustesAbertos, setAjustesAbertos] = useState(false);
+
+  const painel = useMemo(() => {
+    const agora = new Date();
+    return {
+      naSemana: treinosDaSemana(sessoes, agora),
+      sequencia: sequenciaDeSemanas(sessoes, agora),
+      mes: resumoDoMes(sessoes, agora),
+      proximo: proximoTreino(treinos.treinos, sessoes, agora),
+      recordes: recordesBatidos(sessoes).slice(0, 3),
+      volume: semanasRecentes(sessoes, agora).map((s) => ({ rotulo: s.rotulo, valor: s.volumeKg })),
+    };
+  }, [sessoes, treinos.treinos]);
 
   const handleLogout = async () => {
     try {
@@ -47,318 +60,203 @@ const Index = () => {
     }
   };
 
-  const exerciciosDoDia = useMemo<ExercicioInstanciado[]>(() => {
-    if (!selectedDay) return [];
-    return gerarTreinoComId(selectedDay);
-  }, [selectedDay]);
-
-  const gruposUnicos = useMemo(() => {
-    const grupos = [...new Set(exerciciosDoDia.map((e) => e.grupo))];
-    return grupos;
-  }, [exerciciosDoDia]);
-
-  const dayNameMap: Record<number, string> = {
-    1: "Segunda",
-    2: "Terça",
-    3: "Quarta",
-    4: "Quinta",
-    5: "Sexta",
-  };
-  const todayName = dayNameMap[new Date().getDay()] ?? null;
-
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
-  const firstName =
-    user?.displayName?.split(" ")[0] ??
-    user?.email?.split("@")[0] ??
-    "atleta";
-
-  const diaIcone = (dia: string) => {
-    const firstExercise = treino.find((e) => e.dia === dia);
-    return firstExercise ? (grupoIcons[firstExercise.grupo] ?? "📅") : "📅";
-  };
-
-  const getDayProgress = (dia: string) => {
-    const exerciciosDia = treino.filter((e) => e.dia === dia);
-    const total = exerciciosDia.length;
-    const concluidos = exerciciosDia.filter((e) =>
-      exercicioConcluidoHoje(
-        registros,
-        { exercicio: e.exercicio, dia },
-        "series" in e ? e.series : 1,
-      ),
-    ).length;
-    return { total, concluidos };
-  };
-
-  if (erro) {
+  if (treinos.erro || erro) {
     return (
       <ErrorState
-        mensagem="Não foi possível carregar seus registros"
-        onTentarNovamente={() => void recarregar()}
+        mensagem="Não foi possível carregar seus treinos"
+        onTentarNovamente={() => {
+          void treinos.recarregar();
+          void recarregar();
+        }}
       />
     );
   }
 
-  if (!selectedDay) {
-    if (loading) {
-      return (
-        <div className="min-h-screen p-4 max-w-md mx-auto flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Carregando dados...</p>
-          </div>
-        </div>
-      );
-    }
+  if (treinos.loading || loading) return <TelaCarregando />;
 
-    return (
-      <>
-        <div className="p-4 pb-24 max-w-md mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            <div className="pt-4 pb-2">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-primary text-xl font-bold text-primary-foreground">
-                    {firstName[0]?.toUpperCase()}
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold">
-                      {greeting}, {firstName}!
-                    </h1>
-                    <p className="text-muted-foreground text-sm">
-                      Selecione o dia do treino
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleLogout}
-                  className="rounded-xl"
-                  title="Sair"
-                  aria-label="Sair"
-                >
-                  <LogOut className="w-5 h-5" />
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-3">
-              {/* Botão Meus Treinos */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                onClick={() => navigate("/meus-treinos")}
-                className="glass-card rounded-2xl p-4 cursor-pointer hover:border-primary/40 transition-all group border-primary/20"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center text-xl">
-                      <ListChecks className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-primary group-hover:text-primary transition-colors">
-                        Meus Treinos
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Crie e gerencie seus treinos
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
-                </div>
-              </motion.div>
-
-              <div className="flex items-center gap-3 py-1">
-                <div className="flex-1 h-px bg-border/50" />
-                <span className="text-xs text-muted-foreground">Treino da semana</span>
-                <div className="flex-1 h-px bg-border/50" />
-              </div>
-
-              {dias.map((dia, index) => {
-                const isToday = dia === todayName;
-                const { total, concluidos } = getDayProgress(dia);
-                const isComplete = total > 0 && concluidos >= total;
-                const icon = diaIcone(dia);
-                return (
-                  <motion.div
-                    key={dia}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => setSelectedDay(dia)}
-                    className={`glass-card rounded-2xl p-4 cursor-pointer transition-all group ${
-                      isToday
-                        ? "border-primary/60"
-                        : "hover:border-primary/30"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${
-                            isComplete
-                              ? "bg-success/20"
-                              : isToday
-                              ? "bg-primary/20"
-                              : "bg-secondary/50"
-                          }`}
-                        >
-                          {isComplete ? "✅" : icon}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3
-                              className={`font-semibold transition-colors ${
-                                isToday
-                                  ? "text-primary"
-                                  : "text-foreground group-hover:text-primary"
-                              }`}
-                            >
-                              {dia}
-                            </h3>
-                            {isToday && (
-                              <span className="text-xs font-medium px-2 py-0.5 bg-primary/20 text-primary rounded-full">
-                                Hoje
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {concluidos > 0
-                              ? `${concluidos}/${total} concluídos`
-                              : `${total} exercícios`}
-                          </p>
-                          {concluidos > 0 && (
-                            <div className="mt-1.5 h-1 w-28 bg-secondary/50 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all ${
-                                  isComplete ? "bg-success" : "bg-primary"
-                                }`}
-                                style={{
-                                  width: `${(concluidos / total) * 100}%`,
-                                }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <ChevronRight
-                        className={`w-5 h-5 transition-colors ${
-                          isToday
-                            ? "text-primary"
-                            : "text-muted-foreground group-hover:text-primary"
-                        }`}
-                      />
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
-        </div>
-        <footer className="mt-8 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
-          © 2026 Diário de Academia. Todos os direitos reservados.
-        </footer>
-      </>
-    );
-  }
-
-  if (exercicioSelecionado) {
-    return (
-      <>
-        <div className="min-h-screen p-4 pb-28 max-w-md mx-auto">
-          <ExerciseDetail
-            exercicio={exercicioSelecionado}
-            registros={getRegistrosPorExercicio(exercicioSelecionado.exercicio)}
-            ultimoPeso={getUltimoPeso(exercicioSelecionado.exercicio)}
-            onVoltar={() => setExercicioSelecionado(null)}
-            onSalvarRegistro={salvarRegistro}
-            onRemoverRegistro={removerRegistro}
-          />
-        </div>
-        <footer className="mt-2 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
-          © 2026 Diário de Academia. Todos os direitos reservados.
-        </footer>
-      </>
-    );
-  }
+  const hora = new Date().getHours();
+  const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+  // Sem nome no cadastro, cumprimenta sem nome: o email não é um nome.
+  const primeiroNome = user?.displayName?.split(" ")[0];
+  const hojeExtenso = new Date().toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const ultimo = sessoes.find((s) => s.finalizadaEm);
+  const { naSemana, sequencia, mes, proximo, recordes, volume } = painel;
+  const progressoMeta = metaSemanal ? Math.min(100, (naSemana / metaSemanal) * 100) : 0;
 
   return (
-    <>
-      <div className="min-h-screen p-4 pb-24 max-w-md mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
+    <div className="min-h-screen p-4 pb-28 max-w-md mx-auto space-y-5">
+      <Cabecalho titulo={primeiroNome ? `${saudacao}, ${primeiroNome}!` : `${saudacao}!`} subtitulo={hojeExtenso}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-11 w-11"
+          aria-label="Ajustes"
+          onClick={() => setAjustesAbertos(true)}
         >
-          {/* Header */}
-          <div className="pt-4 pb-2">
-            <div className="flex items-center gap-3 mb-2">
-              <button
-                onClick={() => setSelectedDay(null)}
-                className="p-2 rounded-lg hover:bg-secondary/50"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-primary">
-                <Dumbbell className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">Treino de {selectedDay}</h1>
-                <p className="text-muted-foreground text-sm flex items-center gap-1">
-                  <Flame className="w-4 h-4 text-warning" />
-                  {exerciciosDoDia.length} exercícios hoje
-                </p>
-              </div>
-            </div>
-          </div>
+          <Settings className="w-5 h-5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-11 w-11"
+          aria-label="Sair"
+          onClick={handleLogout}
+        >
+          <LogOut className="w-5 h-5" />
+        </Button>
+      </Cabecalho>
 
-          {/* Exercise List */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={selectedDay}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-6"
+      <BannerSessaoAtiva />
+
+      {treinos.treinos.length === 0 && (
+        <EstadoVazio
+          titulo="Monte seu primeiro treino"
+          descricao="Escolha os exercícios, as séries e os dias da semana."
+        >
+          <Button className="h-11 gap-1.5" onClick={() => navigate("/meus-treinos/criar")}>
+            <Plus className="w-4 h-4" />
+            Criar treino
+          </Button>
+        </EstadoVazio>
+      )}
+
+      {proximo && (
+        <section aria-label="Próximo treino" className="glass-card rounded-xl p-4 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] text-muted-foreground">
+              Próximo treino · {quandoEm(proximo.emDias, proximo.dia)}
+            </p>
+            <h2 className="font-semibold truncate">{proximo.treino.nome}</h2>
+            <p className="text-sm text-muted-foreground">
+              {proximo.treino.exercicios.length} exercício
+              {proximo.treino.exercicios.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <BotaoIniciarTreino treino={proximo.treino} destaque className="h-11" />
+        </section>
+      )}
+
+      {treinos.treinos.length > 0 && !proximo && (
+        <p className="text-sm text-muted-foreground">
+          Nenhum treino tem dia definido. Escolha os dias ao editar um treino para vê-lo aqui.
+        </p>
+      )}
+
+      {/* Semana */}
+      <section aria-label="Esta semana" className="glass-card rounded-xl p-4 space-y-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="font-semibold">Esta semana</h2>
+          {sequencia > 0 && (
+            <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <Flame className="w-4 h-4 text-warning" aria-hidden />
+              {sequencia} semana{sequencia !== 1 ? "s" : ""} seguida{sequencia !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+
+        {metaSemanal ? (
+          <>
+            <p className="text-2xl font-semibold">
+              {naSemana} de {metaSemanal}{" "}
+              <span className="text-sm font-normal text-muted-foreground">
+                treino{metaSemanal !== 1 ? "s" : ""}
+              </span>
+            </p>
+            <div
+              role="progressbar"
+              aria-label="Meta semanal"
+              aria-valuemin={0}
+              aria-valuemax={metaSemanal}
+              aria-valuenow={Math.min(naSemana, metaSemanal)}
+              className="h-2 rounded-full bg-secondary overflow-hidden"
             >
-              {gruposUnicos.map((grupo) => (
-                <div key={grupo}>
-                  <h2 className="text-lg font-semibold mb-3 gradient-text">
-                    {grupo}
-                  </h2>
-                  <div className="space-y-3">
-                    {exerciciosDoDia
-                      .filter((e) => e.grupo === grupo)
-                      .map((exercicio, index) => (
-                        <ExerciseCard
-                          key={exercicio.exercicio}
-                          exercicio={exercicio}
-                          index={index}
-                          ultimoPeso={getUltimoPeso(exercicio.exercicio)}
-                          onClick={() => setExercicioSelecionado(exercicio)}
-                          isConcluido={exercicioConcluidoHoje(
-                            registros,
-                            { exercicio: exercicio.exercicio, dia: exercicio.dia },
-                            exercicio.series ?? 1,
-                          )}
-                        />
-                      ))}
-                  </div>
-                </div>
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${progressoMeta}%` }}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-2xl font-semibold">
+              {naSemana}{" "}
+              <span className="text-sm font-normal text-muted-foreground">
+                treino{naSemana !== 1 ? "s" : ""}
+              </span>
+            </p>
+            <Button variant="outline" className="h-11" onClick={() => setAjustesAbertos(true)}>
+              Definir meta
+            </Button>
+          </div>
+        )}
+      </section>
+
+      {ultimo && (
+        <>
+          {/* Mês */}
+          <section aria-label="Resumo do mês" className="space-y-2">
+            <h2 className="font-semibold">Neste mês</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <Indicador rotulo="Treinos" valor={String(mes.treinos)} />
+              <Indicador rotulo="Volume" valor={formatarKg(mes.volumeKg)} />
+              <Indicador rotulo="Séries" valor={String(mes.series)} />
+              <Indicador rotulo="Tempo" valor={formatarDuracao(mes.tempoSeg)} />
+            </div>
+          </section>
+
+          {/* Volume */}
+          <section aria-label="Volume por semana" className="glass-card rounded-xl p-4">
+            <h2 className="font-semibold mb-2">Volume por semana</h2>
+            <Suspense fallback={<div className="h-44" />}>
+              <GraficoColunas
+                medida="Volume"
+                unidade="kg"
+                dados={volume}
+                vazio="O volume aparece quando você registra carga e repetições."
+              />
+            </Suspense>
+          </section>
+
+          {recordes.length > 0 && (
+            <section aria-label="Recordes recentes" className="glass-card rounded-xl p-4 space-y-2">
+              <h2 className="font-semibold flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-warning" aria-hidden />
+                Recordes recentes
+              </h2>
+              {recordes.map((r) => (
+                <p key={`${r.nome}-${r.data}`} className="text-sm flex justify-between gap-3">
+                  <span className="truncate">{r.nome}</span>
+                  <span className="shrink-0 font-medium">{formatarKg(r.peso)}</span>
+                </p>
               ))}
-            </motion.div>
-          </AnimatePresence>
-        </motion.div>
-      </div>
-      <footer className="mt-8 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
-        © 2026 Diário de Academia. Todos os direitos reservados.
-      </footer>
-    </>
+            </section>
+          )}
+
+          <section aria-label="Último treino" className="space-y-2">
+            <h2 className="font-semibold">Último treino</h2>
+            <button
+              type="button"
+              onClick={() => navigate(`/treino/resumo/${ultimo.id}`, { state: { deHistorico: true } })}
+              className="w-full glass-card rounded-xl p-4 flex items-center gap-3 text-left"
+            >
+              <span className="flex-1 min-w-0">
+                <span className="block font-medium truncate">{ultimo.nome}</span>
+                <span className="block text-sm text-muted-foreground">
+                  {new Date(ultimo.iniciadaEm).toLocaleDateString("pt-BR")}
+                </span>
+              </span>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" aria-hidden />
+            </button>
+          </section>
+        </>
+      )}
+
+      <AjustesSheet aberto={ajustesAbertos} onFechar={() => setAjustesAbertos(false)} />
+    </div>
   );
 };
 

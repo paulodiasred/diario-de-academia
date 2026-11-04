@@ -1,5 +1,4 @@
-import { chaveDiaLocal } from "@/domain/datas";
-
+// Treino fixo antigo. Só é usado para converter em rotinas as contas que já registraram séries nele.
 type TipoExercicio = "Força" | "Circuito" | "Cardio";
 
 export interface ExercicioBase {
@@ -39,21 +38,6 @@ export interface TreinoRegistro {
 }
 
 export type Exercicio = ExercicioForca | ExercicioCircuito | ExercicioCardio;
-
-export interface ExercicioInstanciado {
-  id: string;
-  dia: string;
-  grupo: string;
-  exercicio: string;
-  tipo: "Força" | "Circuito" | "Cardio";
-
-  // opcionais
-  descanso?: number;
-  series?: number;
-  circuito?: string[];
-  images?: string[];
-}
-
 
 export const treino: Exercicio[] = [
   // ==================
@@ -307,40 +291,4 @@ export const treino: Exercicio[] = [
     descanso: 45,
     series: 3,
   },
-]; 
-
-export const dias = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"] as const;
-
-export const grupoIcons: Record<string, string> = {
-  "Peito pesado": "💪",
-  "Peito isolado": "💪",
-  Tríceps: "💪",
-  Costas: "🏋️",
-  Bíceps: "💪",
-  Perna: "🦵",
-  Ombro: "🎯",
-  Core: "🧠",
-  Cardio: "❤️",
-};
-
-
-// =======================
-// 🔥 GERADOR DE TREINO COM ID POR DIA
-// =======================
-
-export const gerarTreinoComId = (dia: string): ExercicioInstanciado[] => {
-  const hoje = chaveDiaLocal();
-
-  return treino
-    .filter(e => e.dia === dia)
-    .map(e => ({
-      id: `${e.exercicio}-${dia}-${hoje}`,
-      dia: e.dia,
-      grupo: e.grupo,
-      exercicio: e.exercicio,
-      tipo: e.tipo,
-      descanso: "descanso" in e ? e.descanso : undefined,
-      series: "series" in e ? e.series : undefined,
-      circuito: "circuito" in e ? e.circuito : undefined,
-    }));
-};
+];

@@ -2,13 +2,16 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
   Plus,
-  Dumbbell,
   Trash2,
-  Play,
+  Copy,
   Pencil,
 } from "lucide-react";
+import { TelaCarregando } from "@/components/Estados";
+import { Cabecalho } from "@/components/Cabecalho";
+import { BannerSessaoAtiva } from "@/components/treino/BannerSessaoAtiva";
+import { BotaoIniciarTreino } from "@/components/treino/BotaoIniciarTreino";
+import type { TreinoPersonalizado } from "@/types/catalogo";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -21,20 +24,46 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ErrorState } from "@/components/ErrorState";
+import { LIMITES_GRATUITO, LimiteDoPlano } from "@/domain/planos";
 import { useMeusTreinos } from "@/hooks/useMeusTreinos";
+import { usePlano } from "@/hooks/usePlano";
 import { MUSCULO_LABEL, CATEGORIA_LABEL, DIAS_SEMANA } from "@/types/catalogo";
 import { toast } from "sonner";
 
 const MeusTreinos = () => {
   const navigate = useNavigate();
-  const { treinos, loading, erro, recarregar, deletarTreino } = useMeusTreinos();
+  const { treinos: todosTreinos, loading, erro, recarregar, deletarTreino, criarTreino } =
+    useMeusTreinos();
+  const plano = usePlano();
   const [deletandoId, setDeletandoId] = useState<string | null>(null);
+  const [musculo, setMusculo] = useState("");
+
+  const musculosDisponiveis = [
+    ...new Set(todosTreinos.flatMap((t) => t.exercicios.flatMap((e) => e.primaryMuscles))),
+  ].sort();
+  const treinos = musculo
+    ? todosTreinos.filter((t) => t.exercicios.some((e) => e.primaryMuscles.includes(musculo)))
+    : todosTreinos;
+
+  const handleDuplicar = async (treino: TreinoPersonalizado) => {
+    try {
+      await criarTreino({
+        nome: `${treino.nome} (cópia)`.slice(0, 120),
+        descricao: treino.descricao,
+        // Sem dias: a cópia não entra na semana até o usuário decidir.
+        dias: [],
+        exercicios: treino.exercicios,
+      });
+    } catch (erro) {
+      if (erro instanceof LimiteDoPlano) navigate("/planos");
+      toast.error(erro instanceof LimiteDoPlano ? erro.message : "Não foi possível duplicar o treino");
+    }
+  };
 
   const handleDeletar = async () => {
     if (!deletandoId) return;
     try {
       await deletarTreino(deletandoId);
-      toast.success("Treino excluído!");
     } catch {
       toast.error("Erro ao excluir treino");
     } finally {
@@ -53,12 +82,7 @@ const MeusTreinos = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando treinos...</p>
-        </div>
-      </div>
+      <TelaCarregando />
     );
   }
 
@@ -70,46 +94,55 @@ const MeusTreinos = () => {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
-          {/* Header */}
-          <div className="pt-4 pb-2">
-            <div className="flex items-center gap-3 mb-2">
-              <button
-                onClick={() => navigate("/")}
-                className="p-2 rounded-lg hover:bg-secondary/50"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-primary">
-                <Dumbbell className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">Meus Treinos</h1>
-                <p className="text-muted-foreground text-sm">
-                  {treinos.length} treino{treinos.length !== 1 ? "s" : ""}{" "}
-                  salvo{treinos.length !== 1 ? "s" : ""}
-                </p>
-              </div>
-            </div>
-          </div>
+          <Cabecalho
+            titulo="Meus Treinos"
+            subtitulo={`${todosTreinos.length} treino${todosTreinos.length !== 1 ? "s" : ""} salvo${todosTreinos.length !== 1 ? "s" : ""}`}
+          />
 
-          {/* Criar novo */}
+          {/* Com treinos na lista, criar outro deixa de ser a ação principal. */}
           <Button
-            onClick={() => navigate("/meus-treinos/criar")}
-            className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 rounded-2xl h-12 gap-2"
+            variant={todosTreinos.length > 0 ? "outline" : "default"}
+            onClick={() => navigate(plano.podeCriar("treinos") ? "/meus-treinos/criar" : "/planos")}
+            className="w-full h-12 gap-2"
           >
             <Plus className="w-5 h-5" />
             Criar novo treino
           </Button>
 
+          {!plano.premium && !plano.carregando && (
+            <p className="text-[13px] text-muted-foreground -mt-2">
+              {plano.podeCriar("treinos")
+                ? `${plano.uso.treinos} de ${LIMITES_GRATUITO.treinos} treinos do plano gratuito`
+                : `Você usou os ${LIMITES_GRATUITO.treinos} treinos do plano gratuito. Exclua um ou conheça o Premium.`}
+            </p>
+          )}
+
+          <BannerSessaoAtiva />
+
+          {musculosDisponiveis.length > 1 && (
+            <select
+              aria-label="Filtrar por grupo muscular"
+              className="h-11 w-full rounded-md border border-input bg-secondary/30 px-3 text-sm"
+              value={musculo}
+              onChange={(e) => setMusculo(e.target.value)}
+            >
+              <option value="">Todos os grupos musculares</option>
+              {musculosDisponiveis.map((m) => (
+                <option key={m} value={m}>
+                  {MUSCULO_LABEL[m] ?? m}
+                </option>
+              ))}
+            </select>
+          )}
+
           {/* Lista de treinos */}
           <AnimatePresence>
-            {treinos.length === 0 ? (
+            {todosTreinos.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="text-center py-16 space-y-3"
               >
-                <div className="text-6xl">🏋️</div>
                 <p className="text-muted-foreground">
                   Você ainda não tem treinos salvos.
                 </p>
@@ -137,7 +170,7 @@ const MeusTreinos = () => {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: -100 }}
                       transition={{ delay: index * 0.04 }}
-                      className="glass-card rounded-2xl p-4 space-y-3"
+                      className="glass-card rounded-xl p-4 space-y-3"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -149,35 +182,33 @@ const MeusTreinos = () => {
                               {treino.descricao}
                             </p>
                           )}
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-[13px] text-muted-foreground mt-1">
                             {treino.exercicios.length} exercício
                             {treino.exercicios.length !== 1 ? "s" : ""}
                           </p>
                         </div>
                       </div>
 
-                      {/* Dias da semana */}
-                      {treino.dias && treino.dias.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
+                      {/* Dias, músculos e categorias na mesma linha */}
+                      <div className="flex flex-wrap gap-1">
+                        {treino.dias && treino.dias.length > 0 && (
+                          <>
                           {DIAS_SEMANA.filter((d) =>
                             treino.dias.includes(d)
                           ).map((dia) => (
                             <span
                               key={dia}
-                              className="text-xs px-2 py-0.5 bg-primary/15 text-primary rounded-full font-medium"
+                              className="text-[13px] px-2 py-0.5 bg-primary/15 text-primary rounded-full font-medium"
                             >
                               {dia}
                             </span>
                           ))}
-                        </div>
-                      )}
-
-                      {/* Badges de músculos/categorias */}
-                      <div className="flex flex-wrap gap-1">
+                          </>
+                        )}
                         {musculos.map((m) => (
                           <span
                             key={m}
-                            className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full"
+                            className="text-[13px] px-2 py-0.5 bg-primary/10 text-primary rounded-full"
                           >
                             {MUSCULO_LABEL[m] ?? m}
                           </span>
@@ -185,7 +216,7 @@ const MeusTreinos = () => {
                         {categorias.map((c) => (
                           <span
                             key={c}
-                            className="text-xs px-2 py-0.5 bg-secondary/50 text-muted-foreground rounded-full"
+                            className="text-[13px] px-2 py-0.5 bg-secondary/50 text-muted-foreground rounded-full"
                           >
                             {CATEGORIA_LABEL[c] ?? c}
                           </span>
@@ -194,19 +225,15 @@ const MeusTreinos = () => {
 
                       {/* Ações */}
                       <div className="flex gap-2">
-                        <Button
-                          onClick={() =>
-                            navigate(`/meus-treinos/${treino.id}`)
-                          }
-                          className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90 rounded-xl h-9 gap-1.5 text-sm"
-                        >
-                          <Play className="w-4 h-4" />
-                          Iniciar
-                        </Button>
+                        <BotaoIniciarTreino
+                          treino={treino}
+                          className="flex-1 rounded-lg h-11 text-sm"
+                        />
                         <Button
                           variant="outline"
                           size="icon"
-                          className="rounded-xl h-9 w-9"
+                          className="rounded-lg h-11 w-11"
+                          aria-label={`Editar ${treino.nome}`}
                           onClick={() =>
                             navigate(`/meus-treinos/editar/${treino.id}`)
                           }
@@ -216,7 +243,17 @@ const MeusTreinos = () => {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="rounded-xl h-9 w-9 text-destructive border-destructive/30 hover:bg-destructive/10"
+                          className="rounded-lg h-11 w-11"
+                          aria-label={`Duplicar ${treino.nome}`}
+                          onClick={() => handleDuplicar(treino)}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="rounded-lg h-11 w-11 text-destructive border-destructive/30 hover:bg-destructive/10"
+                          aria-label={`Excluir ${treino.nome}`}
                           onClick={() => setDeletandoId(treino.id!)}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -254,10 +291,6 @@ const MeusTreinos = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <footer className="mt-8 pb-4 text-center text-muted-foreground text-xs max-w-md mx-auto">
-        © 2026 Diário de Academia. Todos os direitos reservados.
-      </footer>
     </>
   );
 };

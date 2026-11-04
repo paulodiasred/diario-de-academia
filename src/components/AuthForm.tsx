@@ -20,7 +20,6 @@ export function AuthForm() {
     setLoading(true);
     try {
       await signIn(email, password);
-      toast.success('Login realizado com sucesso!');
     } catch (error) {
       toast.error(mensagemErroAuth(error));
     } finally {
@@ -33,7 +32,6 @@ export function AuthForm() {
     setLoading(true);
     try {
       await signUp(email, password);
-      toast.success('Conta criada com sucesso!');
     } catch (error) {
       toast.error(mensagemErroAuth(error));
     } finally {
@@ -78,11 +76,12 @@ export function AuthForm() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-md mx-auto p-6"
+      className="min-h-screen max-w-md mx-auto p-6 flex flex-col justify-center"
     >
       <div className="text-center mb-8">
+        <img src="/logo.svg" alt="" className="w-16 h-16 mx-auto mb-4" />
         <h1 className="text-3xl font-bold mb-2">Diário de Academia</h1>
-        <p className="text-muted-foreground">Seu parceiro de treino</p>
+        <p className="text-muted-foreground">Seu treino, sua evolução, seus resultados.</p>
       </div>
 
       <div className="space-y-4 mb-6">
@@ -105,7 +104,7 @@ export function AuthForm() {
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
           </div>
-          <div className="relative flex justify-center text-xs uppercase">
+          <div className="relative flex justify-center text-[13px] uppercase">
             <span className="bg-background px-2 text-muted-foreground">Ou</span>
           </div>
         </div>

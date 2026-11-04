@@ -27,7 +27,7 @@ Registro do que mudou, por que mudou e o que continua pendente.
 
 B8 e B10 não estavam na lista original da fase. B8 entrou porque corrigir B3 passaria a bloquear exercícios no treino fixo, onde o bloqueio nunca era acionado.
 
-**B7 continua aberto:** sair da tela do exercício ainda encerra o timer e descarta o peso digitado. A correção depende da sessão de treino da Fase 3.
+B7 (sair da tela encerrava o timer e descartava o peso) foi corrigido na [Fase 3](fase-3-produto.md).
 
 ## Arquitetura
 

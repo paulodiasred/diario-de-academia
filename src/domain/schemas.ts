@@ -2,15 +2,9 @@ import { z } from "zod";
 import type { ExercicioNoTreino } from "@/types/catalogo";
 
 /** Limites espelhados em firestore.rules. Altere os dois juntos. */
-export const registroInputSchema = z.object({
-  exercicio: z.string().min(1).max(200),
-  peso: z.number().min(0).max(2000),
-  serie: z.number().int().min(0).max(100),
-  dia: z.string().min(1).max(200),
-  concluida: z.boolean().default(true),
-});
+const medidaSchema = z.enum(["carga_reps", "peso_corporal", "tempo", "distancia"]);
 
-export type RegistroInput = z.input<typeof registroInputSchema>;
+const numeroOpcional = (maximo: number) => z.number().min(0).max(maximo).optional();
 
 const exercicioNoTreinoSchema = z
   .object({
@@ -22,6 +16,11 @@ const exercicioNoTreinoSchema = z
     descanso: z.number().min(0).max(3600),
     ordem: z.number().int().min(0),
     images: z.array(z.string()).optional(),
+    medida: medidaSchema.optional(),
+    repsAlvo: numeroOpcional(1000),
+    cargaAlvo: numeroOpcional(2000),
+    duracaoAlvoSeg: numeroOpcional(86400),
+    distanciaAlvoM: numeroOpcional(1_000_000),
   })
   .passthrough();
 
@@ -42,10 +41,22 @@ export type TreinoInput = Omit<z.input<typeof treinoInputSchema>, "exercicios"> 
   exercicios: ExercicioNoTreino[];
 };
 
-export function normalizarRegistro(input: RegistroInput) {
-  return registroInputSchema.parse(input);
-}
-
 export function normalizarTreino(input: TreinoInput) {
   return treinoInputSchema.parse(input);
+}
+
+export const exercicioProprioSchema = z.object({
+  name: z.string().trim().min(1, "Dê um nome ao exercício").max(120),
+  category: z.string().min(1).max(40),
+  equipment: z.string().max(40).nullable(),
+  medida: medidaSchema,
+  primaryMuscles: z.array(z.string()).min(1, "Escolha o músculo principal").max(5),
+  secondaryMuscles: z.array(z.string()).max(10).default([]),
+  instructions: z.array(z.string().max(1000)).max(30).default([]),
+});
+
+export type ExercicioProprioInput = z.input<typeof exercicioProprioSchema>;
+
+export function normalizarExercicioProprio(input: ExercicioProprioInput) {
+  return exercicioProprioSchema.parse(input);
 }
