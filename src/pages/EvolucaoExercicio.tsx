@@ -20,23 +20,23 @@ const EvolucaoExercicio = () => {
   const { premium } = usePlano();
 
   const dados = useMemo(() => {
-    const resumo = exerciciosTreinados(sessoes).find((e) => e.nome === nome);
+    const resumo = exerciciosTreinados(sessoes).find((e) => e.nomes.includes(nome));
     if (!resumo) return null;
     const medida = sessoes
       .flatMap((s) => s.exercicios)
-      .find((e) => e.nome === nome)?.medida;
-    const pontosRm = pontosRmEstimado(sessoes, resumo.exercicioId, nome);
+      .find((e) => resumo.nomes.includes(e.nome))?.medida;
+    const pontosRm = pontosRmEstimado(sessoes, resumo.exercicioId, resumo.nome);
     return {
       resumo,
       medida: medida ?? "carga_reps",
-      pontos: pontosEvolucao(sessoes, resumo.exercicioId, nome, premium ? 30 : 10).map((p) => ({
+      pontos: pontosEvolucao(sessoes, resumo.exercicioId, resumo.nome, premium ? 30 : 10).map((p) => ({
         rotulo: p.data,
         valor: p.peso,
       })),
       pontosRm,
       melhorRm: pontosRm.length > 0 ? Math.max(...pontosRm.map((p) => p.valor)) : null,
-      historico: historicoDoExercicio(sessoes, resumo.exercicioId, nome, premium ? 500 : 5),
-      recordes: recordesRecentes(sessoes).filter((r) => r.nome === nome).length,
+      historico: historicoDoExercicio(sessoes, resumo.exercicioId, resumo.nome, premium ? 500 : 5),
+      recordes: recordesRecentes(sessoes).filter((r) => resumo.nomes.includes(r.nome)).length,
     };
   }, [sessoes, nome, premium]);
 
@@ -69,7 +69,7 @@ const EvolucaoExercicio = () => {
 
   return (
     <div className="min-h-screen p-4 pb-8 max-w-md mx-auto space-y-5">
-      <Cabecalho titulo={nome} onVoltar={voltar} />
+      <Cabecalho titulo={resumo.nome} onVoltar={voltar} />
 
       <div className="grid grid-cols-2 gap-3">
         <Indicador

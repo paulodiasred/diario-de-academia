@@ -1,7 +1,7 @@
 import type { TreinoPersonalizado } from "@/types/catalogo";
 import { GRUPOS_MUSCULARES } from "./catalogo";
 import { chaveDiaLocal } from "./datas";
-import { duracaoDaSessao, maiorPeso, nomeDoDia, type Sessao } from "./sessao";
+import { duracaoDaSessao, maiorPeso, nomeDoDia, type ExercicioSessao, type Sessao } from "./sessao";
 import { formatarKg } from "./texto";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -187,15 +187,40 @@ function emOrdemCronologica(sessoes: Sessao[]): Sessao[] {
   return [...finalizadas(sessoes)].sort((a, b) => dataDa(a).getTime() - dataDa(b).getTime());
 }
 
+/**
+ * A identidade de um exercício ao longo do histórico: mesmo ID ou mesmo nome é o mesmo exercício,
+ * inclusive em cadeia. Renomear não divide a evolução, e registros antigos, que só têm o nome,
+ * continuam ligados aos novos.
+ */
+function identificarExercicios(sessoes: Sessao[]): (e: ExercicioSessao) => string {
+  const pai = new Map<string, string>();
+  const raiz = (chave: string): string => {
+    let atual = chave;
+    while (pai.has(atual) && pai.get(atual) !== atual) atual = pai.get(atual) as string;
+    return atual;
+  };
+  for (const sessao of sessoes) {
+    for (const e of sessao.exercicios) {
+      if (!pai.has(`nome:${e.nome}`)) pai.set(`nome:${e.nome}`, `nome:${e.nome}`);
+      if (!e.exercicioId) continue;
+      if (!pai.has(`id:${e.exercicioId}`)) pai.set(`id:${e.exercicioId}`, `id:${e.exercicioId}`);
+      pai.set(raiz(`id:${e.exercicioId}`), raiz(`nome:${e.nome}`));
+    }
+  }
+  return (e) => raiz(`nome:${e.nome}`);
+}
+
 /** Cada vez que uma carga superou o melhor valor anterior, mais recente primeiro. */
 export function recordesBatidos(sessoes: Sessao[]): RecordeBatido[] {
+  const identidade = identificarExercicios(sessoes);
   const melhores = new Map<string, number>();
   const batidos: RecordeBatido[] = [];
   for (const sessao of emOrdemCronologica(sessoes)) {
     for (const exercicio of sessao.exercicios) {
       const peso = maiorPeso(exercicio);
       if (!peso) continue;
-      const melhor = melhores.get(exercicio.nome);
+      const chave = identidade(exercicio);
+      const melhor = melhores.get(chave);
       // A primeira vez de um exercício é ponto de partida, não recorde.
       if (melhor !== undefined && peso > melhor) {
         batidos.push({
@@ -206,7 +231,7 @@ export function recordesBatidos(sessoes: Sessao[]): RecordeBatido[] {
           data: sessao.iniciadaEm,
         });
       }
-      if (melhor === undefined || peso > melhor) melhores.set(exercicio.nome, peso);
+      if (melhor === undefined || peso > melhor) melhores.set(chave, peso);
     }
   }
   return batidos.reverse();
@@ -214,7 +239,10 @@ export function recordesBatidos(sessoes: Sessao[]): RecordeBatido[] {
 
 export interface ExercicioTreinado {
   exercicioId: string;
+  /** O nome usado mais recentemente. */
   nome: string;
+  /** Todos os nomes que este exercício já teve no histórico. */
+  nomes: string[];
   vezes: number;
   ultimaData: string;
   /** null quando o exercício não usa carga. */
@@ -222,19 +250,22 @@ export interface ExercicioTreinado {
   melhorPesoData: string | null;
 }
 
-/** Exercícios já feitos, do mais recente ao mais antigo. Agrupa pelo nome, como o histórico antigo. */
+/** Exercícios já feitos, do mais recente ao mais antigo. */
 export function exerciciosTreinados(sessoes: Sessao[]): ExercicioTreinado[] {
-  const porNome = new Map<string, ExercicioTreinado>();
+  const identidade = identificarExercicios(sessoes);
+  const porExercicio = new Map<string, ExercicioTreinado>();
   for (const sessao of emOrdemCronologica(sessoes)) {
     for (const exercicio of sessao.exercicios) {
       if (!exercicio.series.some((s) => s.concluida)) continue;
-      const atual = porNome.get(exercicio.nome);
+      const chave = identidade(exercicio);
+      const atual = porExercicio.get(chave);
       const peso = maiorPeso(exercicio);
       const peso_valido = peso !== null && peso > 0 ? peso : null;
       const bateu = peso_valido !== null && peso_valido > (atual?.melhorPeso ?? 0);
-      porNome.set(exercicio.nome, {
+      porExercicio.set(chave, {
         exercicioId: exercicio.exercicioId,
         nome: exercicio.nome,
+        nomes: [...new Set([...(atual?.nomes ?? []), exercicio.nome])],
         vezes: (atual?.vezes ?? 0) + 1,
         ultimaData: sessao.iniciadaEm,
         melhorPeso: bateu ? peso_valido : (atual?.melhorPeso ?? null),
@@ -242,7 +273,7 @@ export function exerciciosTreinados(sessoes: Sessao[]): ExercicioTreinado[] {
       });
     }
   }
-  return [...porNome.values()].sort((a, b) => tempoIso(b.ultimaData) - tempoIso(a.ultimaData));
+  return [...porExercicio.values()].sort((a, b) => tempoIso(b.ultimaData) - tempoIso(a.ultimaData));
 }
 
 const tempoIso = (iso: string) => new Date(iso).getTime();
@@ -436,6 +467,7 @@ const emRepeticoes = (reps: number) => `${reps} reps`;
 
 /** Quem treina com o próprio corpo evolui em repetições: carga nunca contaria o progresso. */
 function recordesDeRepeticoes(sessoes: Sessao[]): RecordeRecente[] {
+  const identidade = identificarExercicios(sessoes);
   const melhores = new Map<string, number>();
   const batidos: RecordeRecente[] = [];
   for (const sessao of emOrdemCronologica(sessoes)) {
@@ -444,7 +476,8 @@ function recordesDeRepeticoes(sessoes: Sessao[]): RecordeRecente[] {
       const semCarga = exercicio.series.filter((s) => s.concluida && (s.peso ?? 0) === 0 && s.reps !== null);
       if (semCarga.length === 0) continue;
       const maior = Math.max(...semCarga.map((s) => s.reps as number));
-      const melhor = melhores.get(exercicio.nome);
+      const chave = identidade(exercicio);
+      const melhor = melhores.get(chave);
       if (melhor !== undefined && maior > melhor) {
         batidos.push({
           nome: exercicio.nome,
@@ -453,7 +486,7 @@ function recordesDeRepeticoes(sessoes: Sessao[]): RecordeRecente[] {
           data: sessao.iniciadaEm,
         });
       }
-      if (melhor === undefined || maior > melhor) melhores.set(exercicio.nome, maior);
+      if (melhor === undefined || maior > melhor) melhores.set(chave, maior);
     }
   }
   return batidos;

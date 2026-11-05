@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { TreinoPersonalizado } from "@/types/catalogo";
 import {
   diasDaSemanaAtual,
+  exerciciosTreinados,
   pontosRmEstimado,
   proximoDaSequencia,
+  recordesBatidos,
   recordesRecentes,
   rmEstimado,
   seriesPorGrupo,
@@ -212,5 +214,47 @@ describe("formatarVolume", () => {
     expect(formatarVolume(99_999)).toBe("99.999 kg");
     expect(formatarVolume(153_600)).toBe("153,6 t");
     expect(formatarVolume(1_536_000)).toBe("1.536 t");
+  });
+});
+
+describe("exercício renomeado continua sendo o mesmo", () => {
+  const com = (id: string, nome: string, peso: number) => exercicio({ exercicioId: id, nome, series: [serie(peso, 10)] });
+
+  it("não vira duas linhas: fica o nome mais recente e a soma de tudo", () => {
+    const lista = exerciciosTreinados([
+      sessao("a", diasAtras(10), [com("Lying_Leg_Curls", "Cadeira Flexora", 40)]),
+      sessao("b", diasAtras(1), [com("Lying_Leg_Curls", "Mesa Flexora", 35)]),
+    ]);
+    expect(lista).toHaveLength(1);
+    expect(lista[0]).toMatchObject({ nome: "Mesa Flexora", vezes: 2, melhorPeso: 40, nomes: ["Cadeira Flexora", "Mesa Flexora"] });
+  });
+
+  it("o recorde compara com o nome antigo, sem recomeçar do zero", () => {
+    const sessoes = [
+      sessao("a", diasAtras(10), [com("x", "Nome antigo", 40)]),
+      sessao("b", diasAtras(5), [com("x", "Nome novo", 35)]),
+      sessao("c", diasAtras(1), [com("x", "Nome novo", 45)]),
+    ];
+    expect(recordesBatidos(sessoes).map((r) => [r.peso, r.anterior])).toEqual([[45, 40]]);
+  });
+
+  it("registro antigo, ligado só pelo nome, entra em cadeia", () => {
+    const lista = exerciciosTreinados([
+      sessao("a", diasAtras(10), [com("nome-supino", "Supino", 40)]),
+      sessao("b", diasAtras(5), [com("catalogo", "Supino", 45)]),
+      sessao("c", diasAtras(1), [com("catalogo", "Supino Reto", 50)]),
+    ]);
+    expect(lista).toHaveLength(1);
+    expect(lista[0].vezes).toBe(3);
+  });
+
+  it("exercícios diferentes continuam separados", () => {
+    const lista = exerciciosTreinados([sessao("a", diasAtras(2), [com("a", "Supino", 40), com("b", "Rosca", 20)])]);
+    expect(lista.map((e) => e.nome).sort()).toEqual(["Rosca", "Supino"]);
+  });
+
+  it("registro sem ID não junta exercícios diferentes", () => {
+    const lista = exerciciosTreinados([sessao("a", diasAtras(2), [com("", "Supino", 40), com("", "Rosca", 20)])]);
+    expect(lista).toHaveLength(2);
   });
 });

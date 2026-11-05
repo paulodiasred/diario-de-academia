@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarCheck, Check, LineChart, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,13 @@ const Onboarding = () => {
   const { metaSemanal, definirMeta } = usePerfil();
   const [passo, setPasso] = useState(0);
 
+  // O roteador muda o endereço em uma transição. Sem esta, as rotas apareceriam ainda em
+  // /entrar, cujo redirecionamento para o início passaria por cima do destino escolhido.
   const concluir = (destino: string) => {
-    concluirOnboarding();
-    navigate(destino, { replace: true });
+    startTransition(() => {
+      concluirOnboarding();
+      navigate(destino, { replace: true });
+    });
   };
 
   return (

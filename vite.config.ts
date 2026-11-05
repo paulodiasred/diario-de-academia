@@ -40,7 +40,16 @@ export default defineConfig({
       workbox: {
         // Só o app: 34 MB de fotos nunca são baixados de antemão.
         globPatterns: ["**/*.{js,css,html,woff2,svg,png}"],
-        globIgnores: ["**/exercises-img/**", "**/og-image.png", "**/placeholder.svg", "**/landing-treino.png"],
+        // As fontes de outros alfabetos só baixam se forem usadas: não precisam ocupar o aparelho.
+        globIgnores: [
+          "**/exercises-img/**",
+          "**/og-image.png",
+          "**/placeholder.svg",
+          "**/landing-treino.png",
+          "**/inter-cyrillic*",
+          "**/inter-greek*",
+          "**/inter-vietnamese*",
+        ],
         navigateFallback: "/index.html",
         runtimeCaching: [
           {
@@ -57,6 +66,8 @@ export default defineConfig({
       },
     }),
   ],
+  // O catálogo tem 900 KB: como texto com JSON.parse, abre mais rápido do que como código.
+  json: { stringify: true },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

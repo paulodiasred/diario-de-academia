@@ -6,10 +6,10 @@ App web instalável (PWA) para registrar treinos de musculação e cardio com o 
 
 ## Funcionalidades
 
-- **Treino em andamento:** série registrada com um toque, valores da última vez já preenchidos, descanso com ajustes e recuperação se o app fechar.
-- **Treinos e biblioteca:** rotinas por dia da semana, 873 exercícios com imagens e instruções, e exercícios próprios.
-- **Evolução:** dashboard, histórico, gráficos de carga, recordes, calendário e comparação entre períodos, sempre com dados reais.
-- **Plano gratuito e Premium:** limites garantidos nas regras do Firestore. Ainda não há cobrança.
+- **Treino em andamento:** série registrada com um toque, valores da última vez já preenchidos, ajustes rápidos de carga, descanso com som e aviso, troca de exercício só no dia e recuperação se o app fechar.
+- **Treinos e biblioteca:** modelos prontos, rotinas por dia da semana ou em sequência, busca por termos de academia, 874 exercícios e exercícios próprios.
+- **Evolução:** histórico que pode ser corrigido, gráficos de carga, recordes, calendário, comparação entre períodos, 1RM estimado e séries por grupo muscular, sempre com dados reais.
+- **Plano gratuito e Premium:** limites garantidos nas regras do Firestore. Ainda não há cobrança: o Premium é pedido por email e liberado à mão.
 - **Seus dados:** exportação em CSV e JSON, e exclusão de conta.
 
 ## Stack
@@ -74,6 +74,7 @@ O app é um site estático: o comando de build é `npm ci && npm run build`, e a
 
 ## Documentação
 
+- [Auditoria de UX e produto](docs/auditoria-ux.md)
 - [Diagnóstico e roadmap](docs/diagnostico-e-roadmap.md)
 - [Fase 2: fundação](docs/fase-2-fundacao.md)
 - [Fase 3: produto](docs/fase-3-produto.md)

@@ -35,7 +35,7 @@ export function progressoDaMeta(
 
   if (meta.tipo === "carga") {
     const nome = meta.exercicioNome ?? "";
-    atual = exerciciosTreinados(sessoes).find((e) => e.nome === nome)?.melhorPeso ?? 0;
+    atual = exerciciosTreinados(sessoes).find((e) => e.nomes.includes(nome))?.melhorPeso ?? 0;
     descricao = `${nome}: ${meta.alvo.toLocaleString("pt-BR")} kg`;
   } else if (meta.tipo === "treinos_mes") {
     atual = resumoDoMes(sessoes, agora).treinos;

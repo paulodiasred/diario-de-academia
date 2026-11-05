@@ -38,16 +38,9 @@ Medido com Lighthouse, em simulação de celular médio com 4G, no build.
 
 ## Vulnerabilidades
 
-`npm audit --omit=dev` aponta 10, nenhuma crítica. Foram analisadas sem aplicar a correção sugerida, porque o comando propõe **rebaixar** o Firebase para a versão 9.
+`npm audit --omit=dev` aponta 4 alertas altos, todos com a mesma origem: `@grpc/grpc-js`, dentro do Firebase. `firebase`, `zod` e `react-router-dom` já foram atualizados.
 
-| Pacote | Situação | Avaliação |
-|---|---|---|
-| `@grpc/grpc-js` e os pacotes do Firebase que dependem dele | Alta | O alerta trata de `getAuthContext`, função de servidor. O risco para um app de navegador parece baixo, mas acompanhe novas versões do Firebase |
-| `zod` | Alta | Consumo de memória ao validar coleções enormes. Só valida dados do próprio aparelho, e as regras limitam o tamanho. Risco baixo. A correção exige a versão 4 |
-| `react-router` | Moderada | Redirecionamento aberto com barra invertida em links. O app só navega para caminhos internos, com o nome do exercício codificado. Risco baixo. A correção exige a versão 7 |
-| `glob`, `minimatch`, `sucrase` | Moderada | Ferramentas de build, sem execução no navegador. `npm audit fix` não resolveu por conflito de dependências |
-
-**Pendente:** planejar os upgrades de zod e react-router como uma tarefa própria, com os testes como rede de proteção.
+Os alertas tratam de funções de servidor, e o pacote não entra no código enviado ao navegador, conferido no build. Não dá para corrigir por aqui: o Firestore fixa a versão em `~1.9.0`. Acompanhe novas versões do Firebase. **Não use `npm audit fix --force`**, que rebaixa o Firebase para a versão 9.
 
 ## Antes de abrir ao público
 
