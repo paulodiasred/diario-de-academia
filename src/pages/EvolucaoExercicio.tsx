@@ -5,7 +5,8 @@ import { EstadoVazio, TelaCarregando } from "@/components/Estados";
 import { ErrorState } from "@/components/ErrorState";
 import { GraficoLinha } from "@/components/graficos";
 import { Indicador } from "@/components/Indicador";
-import { exerciciosTreinados, recordesBatidos } from "@/domain/estatisticas";
+import { RecursoPremium } from "@/components/RecursoPremium";
+import { exerciciosTreinados, pontosRmEstimado, recordesRecentes } from "@/domain/estatisticas";
 import { descreverSerie, historicoDoExercicio, pontosEvolucao } from "@/domain/sessao";
 import { formatarKg } from "@/domain/texto";
 import { usePlano } from "@/hooks/usePlano";
@@ -24,6 +25,7 @@ const EvolucaoExercicio = () => {
     const medida = sessoes
       .flatMap((s) => s.exercicios)
       .find((e) => e.nome === nome)?.medida;
+    const pontosRm = pontosRmEstimado(sessoes, resumo.exercicioId, nome);
     return {
       resumo,
       medida: medida ?? "carga_reps",
@@ -31,8 +33,10 @@ const EvolucaoExercicio = () => {
         rotulo: p.data,
         valor: p.peso,
       })),
+      pontosRm,
+      melhorRm: pontosRm.length > 0 ? Math.max(...pontosRm.map((p) => p.valor)) : null,
       historico: historicoDoExercicio(sessoes, resumo.exercicioId, nome, premium ? 500 : 5),
-      recordes: recordesBatidos(sessoes).filter((r) => r.nome === nome).length,
+      recordes: recordesRecentes(sessoes).filter((r) => r.nome === nome).length,
     };
   }, [sessoes, nome, premium]);
 
@@ -47,7 +51,7 @@ const EvolucaoExercicio = () => {
 
   if (loading) return <TelaCarregando />;
 
-  const voltar = () => navigate("/evolucao");
+  const voltar = () => navigate("/evolucao?aba=exercicios");
 
   if (!dados) {
     return (
@@ -61,11 +65,11 @@ const EvolucaoExercicio = () => {
     );
   }
 
-  const { resumo, medida, pontos, historico, recordes } = dados;
+  const { resumo, medida, pontos, pontosRm, melhorRm, historico, recordes } = dados;
 
   return (
     <div className="min-h-screen p-4 pb-8 max-w-md mx-auto space-y-5">
-<Cabecalho titulo={nome} onVoltar={voltar} />
+      <Cabecalho titulo={nome} onVoltar={voltar} />
 
       <div className="grid grid-cols-2 gap-3">
         <Indicador
@@ -92,6 +96,26 @@ const EvolucaoExercicio = () => {
           </Suspense>
         </section>
       )}
+
+      {melhorRm !== null &&
+        (premium ? (
+          <section aria-label="1RM estimado" className="glass-card rounded-xl p-4 space-y-1">
+            <h2 className="font-semibold">1RM estimado</h2>
+            <p className="text-2xl font-semibold">{formatarKg(melhorRm)}</p>
+            <p className="text-caption text-muted-foreground">
+              Calculado pela carga e pelas repetições (fórmula de Epley, até 12 repetições). Serve para comparar
+              treinos, e não como carga a testar.
+            </p>
+            <Suspense fallback={<div className="h-52" />}>
+              <GraficoLinha medida="1RM estimado" unidade="kg" dados={pontosRm} />
+            </Suspense>
+          </section>
+        ) : (
+          <RecursoPremium
+            titulo="1RM estimado"
+            descricao="Compare sua força entre treinos, mesmo mudando carga e repetições."
+          />
+        ))}
 
       <section aria-label="Histórico do exercício" className="space-y-2">
         <h2 className="font-semibold">Histórico</h2>

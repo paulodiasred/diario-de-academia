@@ -1,32 +1,29 @@
-import { Suspense, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Flame, Plus, Settings, Trophy } from "lucide-react";
+import { Check, ChevronRight, Flame, Plus, Settings, Trophy } from "lucide-react";
 import { AjustesSheet } from "@/components/AjustesSheet";
 import { Cabecalho } from "@/components/Cabecalho";
 import { EstadoVazio, TelaCarregando } from "@/components/Estados";
 import { ErrorState } from "@/components/ErrorState";
-import { GraficoColunas } from "@/components/graficos";
-import { Indicador } from "@/components/Indicador";
 import { BotaoIniciarTreino } from "@/components/treino/BotaoIniciarTreino";
 import { Button } from "@/components/ui/button";
 import {
-  proximoTreino,
-  recordesBatidos,
+  diasDaSemanaAtual,
+  recordesRecentes,
   resumoDoMes,
-  semanasRecentes,
   sequenciaDeSemanas,
+  sugerirTreino,
   treinosDaSemana,
 } from "@/domain/estatisticas";
-import { formatarDuracao, formatarKg } from "@/domain/texto";
+import { formatarDuracao, formatarVolume } from "@/domain/texto";
 import { useAuth } from "@/hooks/useAuth";
 import { useMeusTreinos } from "@/hooks/useMeusTreinos";
 import { usePerfil } from "@/hooks/usePerfil";
 import { useSessoes } from "@/hooks/useSessoes";
 
-const quandoEm = (emDias: number, dia: string) => {
-  if (emDias === 0) return "Hoje";
-  if (emDias === 1) return "Amanhã";
-  return dia;
+const descreverDia = (feito: boolean, previsto: boolean) => {
+  if (feito) return "treino feito";
+  return previsto ? "treino previsto" : "sem treino";
 };
 
 const Index = () => {
@@ -42,10 +39,10 @@ const Index = () => {
     return {
       naSemana: treinosDaSemana(sessoes, agora),
       sequencia: sequenciaDeSemanas(sessoes, agora),
+      semana: diasDaSemanaAtual(treinos.treinos, sessoes, agora),
       mes: resumoDoMes(sessoes, agora),
-      proximo: proximoTreino(treinos.treinos, sessoes, agora),
-      recordes: recordesBatidos(sessoes).slice(0, 3),
-      volume: semanasRecentes(sessoes, agora).map((s) => ({ rotulo: s.rotulo, valor: s.volumeKg })),
+      sugerido: sugerirTreino(treinos.treinos, sessoes, agora),
+      recordes: recordesRecentes(sessoes).slice(0, 3),
     };
   }, [sessoes, treinos.treinos]);
 
@@ -74,20 +71,20 @@ const Index = () => {
   });
   const hojeExtenso = dataExtensa.charAt(0).toUpperCase() + dataExtensa.slice(1);
   const ultimo = sessoes.find((s) => s.finalizadaEm);
-  const { naSemana, sequencia, mes, proximo, recordes, volume } = painel;
+  const treinoDoUltimo = ultimo && treinos.treinos.find((t) => t.id === ultimo.treinoId);
+  const { naSemana, sequencia, semana, mes, sugerido, recordes } = painel;
   const progressoMeta = metaSemanal ? Math.min(100, (naSemana / metaSemanal) * 100) : 0;
+  const partesDoMes = [
+    `${mes.treinos} treino${mes.treinos !== 1 ? "s" : ""}`,
+    ...(mes.volumeKg > 0 ? [formatarVolume(mes.volumeKg)] : []),
+    ...(mes.tempoSeg > 0 ? [formatarDuracao(mes.tempoSeg)] : []),
+  ];
 
   return (
-    <div className="min-h-screen p-4 pb-28 max-w-md mx-auto space-y-5">
+    <div className="min-h-screen p-4 pb-28 max-w-md mx-auto space-y-4">
       <Cabecalho titulo={primeiroNome ? `${saudacao}, ${primeiroNome}!` : `${saudacao}!`} subtitulo={hojeExtenso}>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-11 w-11"
-          aria-label="Ajustes"
-          onClick={() => setAjustesAbertos(true)}
-        >
-          <Settings className="w-5 h-5" />
+        <Button variant="ghost" size="icon" aria-label="Ajustes" onClick={() => setAjustesAbertos(true)}>
+          <Settings />
         </Button>
       </Cabecalho>
 
@@ -97,10 +94,8 @@ const Index = () => {
           descricao="Comece com um modelo pronto ou passe a sua ficha para cá."
         >
           <div className="flex flex-col gap-2">
-            <Button className="h-11" onClick={() => navigate("/meus-treinos/modelos")}>
-              Escolher um modelo
-            </Button>
-            <Button variant="outline" className="h-11 gap-1.5" onClick={() => navigate("/meus-treinos/criar")}>
+            <Button onClick={() => navigate("/meus-treinos/modelos")}>Escolher um modelo</Button>
+            <Button variant="outline" className="gap-1.5" onClick={() => navigate("/meus-treinos/criar")}>
               <Plus className="w-4 h-4" />
               Criar treino
             </Button>
@@ -108,26 +103,24 @@ const Index = () => {
         </EstadoVazio>
       )}
 
-      {proximo && (
-        <section aria-label="Próximo treino" className="glass-card rounded-xl p-4 flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-caption text-muted-foreground">
-              Próximo treino · {quandoEm(proximo.emDias, proximo.dia)}
-            </p>
-            <h2 className="font-semibold truncate">{proximo.treino.nome}</h2>
+      {/* O próximo passo vem primeiro: é para isso que a pessoa abriu o app. */}
+      {sugerido && (
+        <section aria-label="Próximo treino" className="glass-card rounded-xl p-4 space-y-3">
+          <div>
+            <p className="text-caption text-muted-foreground">{sugerido.contexto}</p>
+            <h2 className="text-lg font-semibold leading-tight">{sugerido.treino.nome}</h2>
             <p className="text-sm text-muted-foreground">
-              {proximo.treino.exercicios.length} exercício
-              {proximo.treino.exercicios.length !== 1 ? "s" : ""}
+              {sugerido.treino.exercicios.length} exercício
+              {sugerido.treino.exercicios.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <BotaoIniciarTreino treino={proximo.treino} destaque className="h-11" />
+          <BotaoIniciarTreino treino={sugerido.treino} destaque className="w-full h-12" />
+          {treinos.treinos.length > 1 && (
+            <Button variant="ghost" className="w-full" onClick={() => navigate("/meus-treinos")}>
+              Escolher outro treino
+            </Button>
+          )}
         </section>
-      )}
-
-      {treinos.treinos.length > 0 && !proximo && (
-        <p className="text-sm text-muted-foreground">
-          Nenhum treino tem dia definido. Escolha os dias ao editar um treino para vê-lo aqui.
-        </p>
       )}
 
       {/* Semana */}
@@ -142,13 +135,42 @@ const Index = () => {
           )}
         </div>
 
-        {metaSemanal ? (
-          <>
-            <p className="text-2xl font-semibold">
-              {naSemana} de {metaSemanal}{" "}
-              <span className="text-sm font-normal text-muted-foreground">
-                treino{metaSemanal !== 1 ? "s" : ""}
+        <ul className="grid grid-cols-7 gap-1">
+          {semana.map((dia) => (
+            <li key={dia.chave} className="flex flex-col items-center gap-1">
+              <span
+                aria-hidden
+                className={`text-caption ${dia.hoje ? "font-bold text-foreground" : "text-muted-foreground"}`}
+              >
+                {dia.inicial}
               </span>
+              <span
+                aria-hidden
+                className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                  dia.feito
+                    ? "bg-primary text-primary-foreground"
+                    : dia.previsto
+                      ? "border-2 border-primary"
+                      : "bg-surface-3"
+                }`}
+              >
+                {dia.feito && <Check className="w-4 h-4" />}
+              </span>
+              <span className="sr-only">
+                {dia.nome}: {descreverDia(dia.feito, dia.previsto)}
+                {dia.hoje ? " (hoje)" : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {metaSemanal ? (
+          <div className="space-y-2">
+            <p className="text-sm">
+              <span className="font-semibold">
+                {naSemana} de {metaSemanal}
+              </span>{" "}
+              <span className="text-muted-foreground">treino{metaSemanal !== 1 ? "s" : ""} da meta</span>
             </p>
             <div
               role="progressbar"
@@ -163,69 +185,48 @@ const Index = () => {
                 style={{ width: `${progressoMeta}%` }}
               />
             </div>
-          </>
+          </div>
         ) : (
           <div className="flex items-center justify-between gap-3">
-            <p className="text-2xl font-semibold">
-              {naSemana}{" "}
-              <span className="text-sm font-normal text-muted-foreground">
-                treino{naSemana !== 1 ? "s" : ""}
-              </span>
+            <p className="text-sm">
+              <span className="font-semibold">{naSemana}</span>{" "}
+              <span className="text-muted-foreground">treino{naSemana !== 1 ? "s" : ""}</span>
             </p>
-            <Button variant="outline" className="h-11" onClick={() => setAjustesAbertos(true)}>
+            <Button variant="outline" onClick={() => setAjustesAbertos(true)}>
               Definir meta
             </Button>
           </div>
         )}
       </section>
 
-      {ultimo && (
-        <>
-          {/* Mês */}
-          <section aria-label="Resumo do mês" className="space-y-2">
-            <h2 className="font-semibold">Neste mês</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <Indicador rotulo="Treinos" valor={String(mes.treinos)} />
-              <Indicador rotulo="Volume" valor={formatarKg(mes.volumeKg)} />
-              <Indicador rotulo="Séries" valor={String(mes.series)} />
-              <Indicador rotulo="Tempo" valor={formatarDuracao(mes.tempoSeg)} />
+      {recordes.length > 0 && (
+        <section aria-label="Recordes recentes" className="glass-card rounded-xl p-4 space-y-2">
+          <h2 className="font-semibold flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-warning" aria-hidden />
+            Recordes recentes
+          </h2>
+          {recordes.map((r) => (
+            <div key={`${r.nome}-${r.data}`} className="text-sm flex justify-between gap-3">
+              <span className="min-w-0">
+                <span className="block truncate">{r.nome}</span>
+                <span className="block text-caption text-muted-foreground">
+                  {new Date(r.data).toLocaleDateString("pt-BR")}
+                </span>
+              </span>
+              <span className="shrink-0 font-medium">{r.valor}</span>
             </div>
-          </section>
+          ))}
+        </section>
+      )}
 
-          {/* Volume */}
-          <section aria-label="Volume por semana" className="glass-card rounded-xl p-4">
-            <h2 className="font-semibold mb-2">Volume por semana</h2>
-            <Suspense fallback={<div className="h-44" />}>
-              <GraficoColunas
-                medida="Volume"
-                unidade="kg"
-                dados={volume}
-                vazio="O volume aparece quando você registra carga e repetições."
-              />
-            </Suspense>
-          </section>
-
-          {recordes.length > 0 && (
-            <section aria-label="Recordes recentes" className="glass-card rounded-xl p-4 space-y-2">
-              <h2 className="font-semibold flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-warning" aria-hidden />
-                Recordes recentes
-              </h2>
-              {recordes.map((r) => (
-                <p key={`${r.nome}-${r.data}`} className="text-sm flex justify-between gap-3">
-                  <span className="truncate">{r.nome}</span>
-                  <span className="shrink-0 font-medium">{formatarKg(r.peso)}</span>
-                </p>
-              ))}
-            </section>
-          )}
-
-          <section aria-label="Último treino" className="space-y-2">
-            <h2 className="font-semibold">Último treino</h2>
+      {ultimo && (
+        <section aria-label="Último treino" className="space-y-2">
+          <h2 className="font-semibold">Último treino</h2>
+          <div className="glass-card rounded-xl flex items-center">
             <button
               type="button"
               onClick={() => navigate(`/treino/resumo/${ultimo.id}`, { state: { deHistorico: true } })}
-              className="w-full glass-card rounded-xl p-4 flex items-center gap-3 text-left"
+              className="flex-1 min-w-0 p-4 flex items-center gap-3 text-left"
             >
               <span className="flex-1 min-w-0">
                 <span className="block font-medium truncate">{ultimo.nome}</span>
@@ -233,10 +234,31 @@ const Index = () => {
                   {new Date(ultimo.iniciadaEm).toLocaleDateString("pt-BR")}
                 </span>
               </span>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" aria-hidden />
+              <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" aria-hidden />
             </button>
-          </section>
-        </>
+            {treinoDoUltimo && (
+              <div className="pr-3 shrink-0">
+                <BotaoIniciarTreino treino={treinoDoUltimo} rotulo="Repetir" />
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {ultimo && (
+        <section aria-label="Resumo do mês">
+          <button
+            type="button"
+            onClick={() => navigate("/evolucao")}
+            className="w-full glass-card rounded-xl p-4 flex items-center gap-3 text-left"
+          >
+            <span className="flex-1 min-w-0">
+              <span className="block font-semibold">Neste mês</span>
+              <span className="block text-sm text-muted-foreground">{partesDoMes.join(" · ")}</span>
+            </span>
+            <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" aria-hidden />
+          </button>
+        </section>
       )}
 
       <AjustesSheet aberto={ajustesAbertos} onFechar={() => setAjustesAbertos(false)} />

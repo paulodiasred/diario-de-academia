@@ -66,6 +66,14 @@ async function iniciar(page: Page, nome = "Treino de teste") {
   await expect(page).toHaveURL(/\/treino$/);
 }
 
+/** Editar, duplicar e excluir ficam na ficha: o cartão só tem o Iniciar. */
+async function acaoDaFicha(page: Page, acao: "Editar" | "Duplicar" | "Excluir", nome: string) {
+  await page.getByRole("button", { name: `Detalhes de ${nome}`, exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: `${acao} ${nome}`, exact: true }).click();
+}
+
+const abaDaEvolucao = (page: Page, nome: string) => page.getByRole("tab", { name: nome }).click();
+
 const peso = (page: Page, n: number) => page.getByLabel(`Peso da série ${n} em kg`);
 const reps = (page: Page, n: number) => page.getByLabel(`Repetições da série ${n}`, { exact: true });
 
@@ -96,13 +104,13 @@ test.describe("gestão de treinos", () => {
     await criarConta(page);
     await criarTreino(page, "Ordem", ["Abdominal 3/4", "Supino Inclinado com Halteres"]);
 
-    await page.getByRole("button", { name: "Editar Ordem" }).click();
+    await acaoDaFicha(page, "Editar", "Ordem");
     await page.getByRole("button", { name: "Configurar Supino Inclinado com Halteres" }).click();
     await page.getByRole("button", { name: "Subir Supino Inclinado com Halteres" }).click();
     await page.getByRole("button", { name: "Salvar" }).click();
-    await expect(page.getByRole("button", { name: "Editar Ordem" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ordem", exact: true })).toBeVisible();
 
-    await page.getByRole("button", { name: "Duplicar Ordem" }).click();
+    await acaoDaFicha(page, "Duplicar", "Ordem");
     await expect(page.getByRole("heading", { name: "Ordem (cópia)" })).toBeVisible();
 
     await page.reload();
@@ -459,6 +467,7 @@ test.describe("dados antigos", () => {
     await expect(periodo).toContainText("1 treino fora do tempo");
     await expect(periodo.getByText("0 kg")).toBeVisible();
 
+    await abaDaEvolucao(page, "Exercícios");
     await page.getByRole("button", { name: /Supino barra/ }).click();
     await expect(page.getByText("62,5 kg", { exact: true })).toBeVisible();
   });
@@ -501,6 +510,7 @@ test.describe("dashboard e evolução", () => {
     // Sem período anterior, não há porcentagem inventada.
     await expect(periodo.getByText("vs. anterior")).toHaveCount(0);
 
+    await abaDaEvolucao(page, "Exercícios");
     await page.getByRole("button", { name: /Supino Inclinado com Halteres/ }).click();
     await expect(page.getByRole("heading", { name: "Supino Inclinado com Halteres" })).toBeVisible();
     await expect(page.getByText("20 kg", { exact: true })).toBeVisible();
@@ -517,10 +527,13 @@ test.describe("dashboard e evolução", () => {
     await expect(page.getByRole("region", { name: "Recordes recentes" })).toContainText("25 kg");
 
     await page.goto("/evolucao");
+    await abaDaEvolucao(page, "Histórico");
     const hoje = new Date().toLocaleDateString("pt-BR");
     await page.getByRole("button", { name: new RegExp(`^${hoje}: Treino de teste`) }).click();
     await page.getByRole("button", { name: "Voltar" }).click();
-    await expect(page).toHaveURL(/\/evolucao$/);
+    // Volta para a aba em que a pessoa estava.
+    await expect(page).toHaveURL(/\/evolucao\?aba=historico$/);
+    await expect(page.getByRole("tab", { name: "Histórico" })).toHaveAttribute("aria-selected", "true");
   });
 
   test("meta semanal: começa vazia, é definida e sobrevive à recarga", async ({ page }) => {
@@ -626,7 +639,7 @@ test.describe("planos, metas e dados", () => {
     await page.reload();
     await expect(page.getByText("1 de 4 treinos")).toBeVisible();
 
-    await page.getByRole("button", { name: "Excluir Treino de teste" }).click();
+    await acaoDaFicha(page, "Excluir", "Treino de teste");
     await page.getByRole("alertdialog").getByRole("button", { name: "Excluir" }).click();
     await expect(page.getByText("0 de 4 treinos")).toBeVisible();
     await page.reload();
@@ -643,11 +656,16 @@ test.describe("planos, metas e dados", () => {
     await finalizar(page);
 
     await page.goto("/evolucao");
+    await expect(page.getByRole("heading", { name: "Volume por semana" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Séries por grupo muscular" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Séries por grupo muscular" })).toHaveCount(0);
+    await abaDaEvolucao(page, "Conquistas");
     await expect(page.getByRole("heading", { name: "Metas personalizadas" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Nova meta" })).toBeHidden();
     await expect(page.getByRole("region", { name: "Conquistas" })).toContainText("Primeiro treino");
     await expect(page.getByRole("region", { name: "Conquistas" })).toContainText("Mais 6 conquistas no Premium");
 
+    await abaDaEvolucao(page, "Resumo");
     await page.getByRole("button", { name: /30 dias/ }).click();
     await expect(page).toHaveURL(/\/planos$/);
   });
@@ -668,7 +686,9 @@ test.describe("planos, metas e dados", () => {
     await page.getByRole("button", { name: "30 dias" }).click();
     await expect(page.getByRole("button", { name: "30 dias" })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("heading", { name: "Volume por semana" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Séries por grupo muscular" })).toContainText("Peito");
 
+    await abaDaEvolucao(page, "Conquistas");
     await page.getByRole("button", { name: "Nova meta" }).click();
     await page.getByLabel("Exercício", { exact: true }).selectOption("Supino Inclinado com Halteres");
     await page.getByLabel(/Alvo/).fill("100");
@@ -859,7 +879,7 @@ test.describe("confiança nos dados", () => {
     // Vale depois de recarregar: foi gravado, não só alterado na tela.
     await page.reload();
     await expect(page.getByText("300 kg")).toBeVisible();
-    await page.goto("/evolucao");
+    await page.goto("/evolucao?aba=exercicios");
     await expect(page.getByText(/melhor carga 30 kg/)).toBeVisible();
   });
 
@@ -937,7 +957,7 @@ test.describe("confiança nos dados", () => {
   test("excluir um treino da lista pode ser desfeito", async ({ page }) => {
     await criarConta(page);
     await criarTreino(page);
-    await page.getByRole("button", { name: "Excluir Treino de teste" }).click();
+    await acaoDaFicha(page, "Excluir", "Treino de teste");
     await page.getByRole("alertdialog").getByRole("button", { name: "Excluir", exact: true }).click();
     await expect(page.getByText("Você ainda não tem treinos salvos")).toBeVisible();
     await page.getByRole("button", { name: "Desfazer" }).click();
@@ -973,6 +993,7 @@ test.describe("confiança nos dados", () => {
   test("o eixo do gráfico não corta os números", async ({ page }) => {
     await treinoFinalizado(page);
     await page.getByRole("button", { name: "Concluir", exact: true }).click();
+    await page.goto("/evolucao");
     await expect(page.getByRole("heading", { name: "Volume por semana" })).toBeVisible();
     await page.waitForSelector(".recharts-yAxis text");
     const cortados = await page.evaluate(() =>
@@ -1075,7 +1096,7 @@ test.describe("primeiro treino", () => {
   test("exercícios recolhidos mostram o resumo, e abrir permite configurar", async ({ page }) => {
     await criarConta(page);
     await criarTreino(page, "Recolhido", ["Supino Inclinado com Halteres", "Abdominal 3/4"]);
-    await page.getByRole("button", { name: "Editar Recolhido" }).click();
+    await acaoDaFicha(page, "Editar", "Recolhido");
 
     await expect(page.getByText("3 × 10 · 60s de descanso").first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Aumentar séries" })).toBeHidden();
@@ -1088,7 +1109,7 @@ test.describe("primeiro treino", () => {
   test("arrastar reordena os exercícios", async ({ page }) => {
     await criarConta(page);
     await criarTreino(page, "Arrastar", ["Supino Inclinado com Halteres", "Abdominal 3/4"]);
-    await page.getByRole("button", { name: "Editar Arrastar" }).click();
+    await acaoDaFicha(page, "Editar", "Arrastar");
 
     const nomes = () => page.getByRole("button", { name: /^Configurar/ }).evaluateAll((b) => b.map((x) => x.getAttribute("aria-label")));
     expect(await nomes()).toEqual(["Configurar Supino Inclinado com Halteres", "Configurar Abdominal 3/4"]);
@@ -1131,7 +1152,7 @@ test.describe("primeiro treino", () => {
     await page.setViewportSize({ width: 360, height: 640 });
     await criarConta(page);
     await criarTreino(page, "Longo", ["Supino Inclinado com Halteres", "Abdominal 3/4", "Leg Press", "Prancha"]);
-    await page.getByRole("button", { name: "Editar Longo" }).click();
+    await acaoDaFicha(page, "Editar", "Longo");
     await page.evaluate(() => window.scrollTo(0, 0));
     await expect(page.getByRole("button", { name: "Salvar" })).toBeInViewport();
   });
@@ -1243,7 +1264,7 @@ test.describe("treino com uma mão", () => {
 
     // A ficha salva continua igual.
     await page.goto("/meus-treinos");
-    await page.getByRole("button", { name: "Editar Flexivel" }).click();
+    await acaoDaFicha(page, "Editar", "Flexivel");
     await expect(page.getByRole("button", { name: "Configurar Rosca Martelo" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Configurar Abdominal 3/4" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Configurar Leg Press" })).toBeHidden();
@@ -1369,7 +1390,7 @@ test.describe("treino com uma mão", () => {
     // A barra não pode cobrir o fim da tela.
     await page.goto("/meus-treinos");
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    await page.getByRole("button", { name: "Excluir Treino de teste" }).click();
+    await acaoDaFicha(page, "Excluir", "Treino de teste");
     await page.keyboard.press("Escape");
 
     await barra.click();
@@ -1382,7 +1403,7 @@ test.describe("treino com uma mão", () => {
   test("tempo em minutos e segundos: prancha de 45 s fica 0:45 em toda parte", async ({ page }) => {
     await criarConta(page);
     await criarTreino(page, "Isometria", ["Prancha"]);
-    await page.getByRole("button", { name: "Editar Isometria" }).click();
+    await acaoDaFicha(page, "Editar", "Isometria");
     await page.getByRole("button", { name: "Configurar Prancha" }).click();
     await page.getByLabel("Segundos").fill("45");
     await expect(page.getByText(/0:45/)).toBeVisible();
@@ -1435,7 +1456,7 @@ test.describe("acessibilidade e padrões", () => {
       // Durante a animação de saída, o aviso fica transparente e o axe mede um contraste que não existe.
       await expect(page.locator("[data-sonner-toast]")).toHaveCount(0, { timeout: 10_000 });
 
-      await page.getByRole("button", { name: /^Editar Treino C/ }).click();
+      await acaoDaFicha(page, "Editar", "Treino C - Pernas");
       await page.getByRole("button", { name: "Configurar Agachamento Livre com Barra" }).click();
       await analisar("edição com exercício aberto");
       await page.getByRole("button", { name: "Catálogo", exact: true }).click();
@@ -1541,6 +1562,181 @@ test.describe("acessibilidade e padrões", () => {
     await expect(erro).toBeVisible();
     await page.waitForTimeout(5_000);
     await expect(erro).toBeVisible();
+  });
+});
+
+test.describe("sinal ruim na academia", () => {
+  test("finalizar antes de os dados carregarem mostra o resumo e não ressuscita o treino", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page);
+    await page.goto("/meus-treinos");
+    await iniciar(page);
+    await peso(page, 1).fill("20");
+    await concluir(page, 1);
+    // Tempo para o rascunho chegar à nuvem: é ele que poderia voltar depois de finalizar.
+    await page.waitForTimeout(1500);
+
+    // Abre o app de novo com a rede lenta: as leituras ainda estão a caminho ao finalizar.
+    await page.route(/google\.firestore\.v1\.Firestore/, async (rota) => {
+      await new Promise((r) => setTimeout(r, 2500));
+      await rota.continue().catch(() => undefined);
+    });
+    await page.goto("/treino");
+    await page.getByRole("button", { name: "Finalizar", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Finalizar" }).click();
+    await expect(page.getByText("Treino concluído")).toBeVisible();
+
+    // Mesmo depois de as leituras atrasadas chegarem, continua no resumo, com o treino certo.
+    await page.waitForTimeout(6000);
+    await expect(page.getByText("Treino concluído")).toBeVisible();
+    await expect(page.getByText("200 kg")).toBeVisible();
+
+    await page.getByRole("button", { name: "Concluir", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Ajustes" })).toBeVisible();
+    await page.waitForTimeout(3000);
+    await expect(page.getByRole("button", { name: /Continuar Treino de teste/ })).toBeHidden();
+    await expect(page.getByRole("heading", { name: "Último treino" })).toBeVisible();
+  });
+});
+
+test.describe("início e evolução", () => {
+  test("sem dias definidos, a tela inicial sugere o próximo da sequência", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page, "Treino B");
+    await criarTreino(page, "Treino A");
+    await page.goto("/");
+
+    const proximo = page.getByRole("region", { name: "Próximo treino" });
+    await expect(proximo).toContainText("Próximo da sua sequência");
+    await expect(proximo).toContainText("Treino A");
+
+    await proximo.getByRole("button", { name: "Iniciar" }).click();
+    await page.getByLabel("Peso da série 1 em kg").fill("20");
+    await concluir(page, 1);
+    await finalizar(page);
+    await page.getByRole("button", { name: "Concluir", exact: true }).click();
+    await expect(proximo).toContainText("Treino B");
+  });
+
+  test("escolher outro treino, repetir o último e ver a semana", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page);
+    await criarTreino(page, "Outro treino");
+    await page.goto("/meus-treinos");
+    await iniciar(page);
+    await page.getByLabel("Peso da série 1 em kg").fill("20");
+    await concluir(page, 1);
+    await finalizar(page);
+    await page.getByRole("button", { name: "Concluir", exact: true }).click();
+
+    const nomeDeHoje = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][new Date().getDay()];
+    await expect(page.getByRole("region", { name: "Esta semana" })).toContainText(`${nomeDeHoje}: treino feito`);
+
+    // O mês cabe em uma linha e leva à Evolução.
+    await page.getByRole("button", { name: /Neste mês/ }).click();
+    await expect(page).toHaveURL(/\/evolucao/);
+    await page.goBack();
+
+    await page.getByRole("button", { name: "Escolher outro treino" }).click();
+    await expect(page.getByRole("heading", { name: "Meus Treinos" })).toBeVisible();
+    await page.goBack();
+
+    await page.getByRole("region", { name: "Último treino" }).getByRole("button", { name: "Repetir" }).click();
+    await expect(page).toHaveURL(/\/treino$/);
+    await expect(peso(page, 1)).toHaveValue("20");
+  });
+
+  test("a ficha mostra os exercícios antes de começar, sem abrir a edição", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page, "Ficha", ["Supino Inclinado com Halteres", "Abdominal 3/4"]);
+    await page.getByRole("button", { name: "Detalhes de Ficha", exact: true }).click();
+    const ficha = page.getByRole("dialog");
+    await expect(ficha.getByText("Supino Inclinado com Halteres")).toBeVisible();
+    await expect(ficha.getByText("3 × 10 · 60s de descanso").first()).toBeVisible();
+    await ficha.getByRole("button", { name: "Iniciar" }).click();
+    await expect(page).toHaveURL(/\/treino$/);
+  });
+
+  test("o cartão inteiro abre a ficha", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page, "Toque");
+    await page.getByRole("heading", { name: "Toque", exact: true }).click();
+    await expect(page.getByRole("dialog")).toContainText("Supino Inclinado com Halteres");
+  });
+
+  test("evolução em abas: a aba escolhida fica no endereço e sobrevive à recarga", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page);
+    await page.goto("/meus-treinos");
+    await iniciar(page);
+    await page.getByLabel("Peso da série 1 em kg").fill("20");
+    await concluir(page, 1);
+    await finalizar(page);
+
+    await page.goto("/evolucao");
+    await expect(page.getByRole("region", { name: "Comparação entre períodos" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Conquistas" })).toBeHidden();
+
+    await abaDaEvolucao(page, "Conquistas");
+    await expect(page).toHaveURL(/aba=conquistas/);
+    await expect(page.getByRole("region", { name: "Conquistas" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Comparação entre períodos" })).toBeHidden();
+    await page.reload();
+    await expect(page.getByRole("tab", { name: "Conquistas" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("1RM estimado: Premium vê o número; gratuito vê o que ganharia, sem número falso", async ({ page, request }) => {
+    const email = emailNovo();
+    const conta = await request.post(
+      "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-key",
+      { data: { email, password: SENHA, returnSecureToken: true } },
+    );
+    const uid = (await conta.json()).localId as string;
+    await entrar(page, email);
+    await criarTreino(page);
+    await page.goto("/meus-treinos");
+    await iniciar(page);
+    await page.getByLabel("Peso da série 1 em kg").fill("100");
+    await concluir(page, 1);
+    await finalizar(page);
+
+    const url = `/evolucao/exercicio/${encodeURIComponent("Supino Inclinado com Halteres")}`;
+    await page.goto(url);
+    await expect(page.getByRole("heading", { name: "1RM estimado" })).toBeVisible();
+    await expect(page.getByText("133,3 kg")).toBeHidden();
+
+    const premium = await request.patch(`${FIRESTORE}/entitlements/${uid}`, {
+      headers: COMO_ADMIN,
+      data: { fields: { plano: { stringValue: "premium" } } },
+    });
+    expect(premium.ok()).toBe(true);
+    await page.reload();
+    // 100 kg × 10 repetições.
+    await expect(page.getByText("133,3 kg")).toBeVisible();
+  });
+
+  test("computador: painel com largura limitada e Evolução em duas colunas", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await criarConta(page);
+    await page.goto("/exercicios");
+    await page.getByPlaceholder("Buscar exercício...").fill("Supino Reto com Barra - Pegada Média");
+    await page.getByRole("button", { name: /Supino Reto com Barra - Pegada Média/ }).first().click();
+    const foto = await page.getByRole("dialog").locator("img").first().boundingBox();
+    expect(foto!.width).toBeLessThanOrEqual(300);
+    await expect(page.getByText("Como executar")).toBeInViewport();
+    await page.keyboard.press("Escape");
+
+    await criarTreino(page);
+    await page.goto("/meus-treinos");
+    await iniciar(page);
+    await page.getByLabel("Peso da série 1 em kg").fill("20");
+    await concluir(page, 1);
+    await finalizar(page);
+    await page.goto("/evolucao");
+    const a = await page.getByRole("region", { name: "Frequência semanal" }).boundingBox();
+    const b = await page.getByRole("region", { name: "Volume semanal" }).boundingBox();
+    expect(Math.abs(a!.y - b!.y)).toBeLessThan(4);
+    expect(b!.x).toBeGreaterThan(a!.x + a!.width - 1);
   });
 });
 

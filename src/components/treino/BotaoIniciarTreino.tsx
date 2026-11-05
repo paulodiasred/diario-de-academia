@@ -20,10 +20,12 @@ interface BotaoIniciarTreinoProps {
   treino: TreinoPersonalizado;
   /** A ação principal da tela. Em listas, o botão fica discreto. */
   destaque?: boolean;
+  /** Texto no lugar de "Iniciar". */
+  rotulo?: string;
   className?: string;
 }
 
-export function BotaoIniciarTreino({ treino, destaque = false, className }: BotaoIniciarTreinoProps) {
+export function BotaoIniciarTreino({ treino, destaque = false, rotulo = "Iniciar", className }: BotaoIniciarTreinoProps) {
   const navigate = useNavigate();
   const { sessao, iniciar, descartar } = useSessaoAtiva();
   const [conflito, setConflito] = useState(false);
@@ -57,7 +59,7 @@ export function BotaoIniciarTreino({ treino, destaque = false, className }: Bota
         className={`gap-1.5 ${className ?? ""}`}
       >
         <Play className="w-4 h-4" />
-        {sessao?.treinoId === treino.id ? "Continuar" : "Iniciar"}
+        {sessao?.treinoId === treino.id ? "Continuar" : rotulo}
       </Button>
 
       <AlertDialog open={conflito} onOpenChange={setConflito}>

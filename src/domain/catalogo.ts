@@ -6,7 +6,8 @@ import {
   type ExercicioNoTreino,
 } from "@/types/catalogo";
 import { posicaoPopular, sinonimosDe } from "./curadoriaCatalogo";
-import { normalizarBusca } from "./texto";
+import { medidaDoExercicio } from "./sessao";
+import { formatarKg, formatarTempo, normalizarBusca } from "./texto";
 
 /** Pelo ID ou, para exercícios antigos sem ligação, pelo nome idêntico. */
 export function encontrarExercicio(
@@ -159,6 +160,22 @@ export function buscarExercicios(lista: ExercicioCatalogo[], busca: string): Exe
 }
 
 // ---------- Do catálogo para o treino ----------
+
+/** A configuração em uma linha: é o que permite ler a ficha sem abrir cada exercício. */
+export function resumirConfiguracao(ex: ExercicioNoTreino): string {
+  const medida = medidaDoExercicio(ex);
+  const partes: string[] = [];
+  if (medida === "carga_reps" || medida === "peso_corporal") {
+    partes.push(ex.repsAlvo ? `${ex.series} × ${ex.repsAlvo}` : `${ex.series} séries`);
+    if (ex.cargaAlvo) partes.push(formatarKg(ex.cargaAlvo));
+  } else {
+    partes.push(`${ex.series} ${ex.series === 1 ? "série" : "séries"}`);
+    if (ex.duracaoAlvoSeg !== undefined) partes.push(formatarTempo(ex.duracaoAlvoSeg));
+    if (ex.distanciaAlvoM !== undefined) partes.push(`${ex.distanciaAlvoM} m`);
+  }
+  partes.push(`${ex.descanso}s de descanso`);
+  return partes.join(" · ");
+}
 
 export type AjustesExercicio = Partial<
   Pick<ExercicioNoTreino, "series" | "descanso" | "medida" | "repsAlvo" | "cargaAlvo" | "duracaoAlvoSeg" | "distanciaAlvoM">

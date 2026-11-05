@@ -1,6 +1,8 @@
 import type { TreinoPersonalizado } from "@/types/catalogo";
+import { GRUPOS_MUSCULARES } from "./catalogo";
 import { chaveDiaLocal } from "./datas";
 import { duracaoDaSessao, maiorPeso, nomeDoDia, type Sessao } from "./sessao";
+import { formatarKg } from "./texto";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -302,4 +304,200 @@ export function proximoTreino(
     if (treino) return { treino, dia, emDias };
   }
   return null;
+}
+
+// ---------- Sugestão de treino ----------
+
+export interface TreinoSugerido {
+  treino: TreinoPersonalizado;
+  /** Linha acima do nome: quando, ou de onde veio a sugestão. */
+  contexto: string;
+}
+
+const quandoEm = (emDias: number, dia: string) => {
+  if (emDias === 0) return "Hoje";
+  if (emDias === 1) return "Amanhã";
+  return dia;
+};
+
+/** A ordem natural da ficha: "Treino A", "Treino B", e "Treino 10" depois de "Treino 9". */
+function naOrdemDaFicha(treinos: TreinoPersonalizado[]): TreinoPersonalizado[] {
+  return [...treinos].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { numeric: true }));
+}
+
+/** Quem treina A/B/C sem dia fixo: o seguinte ao último feito, voltando ao primeiro no fim. */
+export function proximoDaSequencia(
+  treinos: TreinoPersonalizado[],
+  sessoes: Sessao[],
+): TreinoPersonalizado | null {
+  const ordem = naOrdemDaFicha(treinos);
+  if (ordem.length === 0) return null;
+  const recentes = [...finalizadas(sessoes)].sort((a, b) => dataDa(b).getTime() - dataDa(a).getTime());
+  const ultimo = recentes.find((s) => ordem.some((t) => t.id === s.treinoId));
+  if (!ultimo) return ordem[0];
+  const posicao = ordem.findIndex((t) => t.id === ultimo.treinoId);
+  return ordem[(posicao + 1) % ordem.length];
+}
+
+/** Toda conta com treino tem um próximo passo: pela agenda ou, sem ela, pela sequência. */
+export function sugerirTreino(
+  treinos: TreinoPersonalizado[],
+  sessoes: Sessao[],
+  agora: Date = new Date(),
+): TreinoSugerido | null {
+  const agendado = proximoTreino(treinos, sessoes, agora);
+  if (agendado) {
+    return { treino: agendado.treino, contexto: `Próximo treino · ${quandoEm(agendado.emDias, agendado.dia)}` };
+  }
+  const seguinte = proximoDaSequencia(treinos, sessoes);
+  return seguinte && { treino: seguinte, contexto: "Próximo da sua sequência" };
+}
+
+// ---------- A semana em uma linha ----------
+
+export interface DiaDaSemana {
+  chave: string;
+  inicial: string;
+  nome: string;
+  feito: boolean;
+  previsto: boolean;
+  hoje: boolean;
+}
+
+export function diasDaSemanaAtual(
+  treinos: TreinoPersonalizado[],
+  sessoes: Sessao[],
+  agora: Date = new Date(),
+): DiaDaSemana[] {
+  const inicio = inicioDaSemana(agora);
+  const hoje = chaveDiaLocal(agora);
+  const feitos = new Set(finalizadas(sessoes).map((s) => chaveDiaLocal(dataDa(s))));
+  const previstos = new Set(treinos.flatMap((t) => t.dias ?? []));
+  return Array.from({ length: 7 }, (_, i) => {
+    const data = somarDias(inicio, i);
+    const chave = chaveDiaLocal(data);
+    const nome = nomeDoDia(data);
+    return {
+      chave,
+      nome,
+      inicial: nome.charAt(0),
+      feito: feitos.has(chave),
+      previsto: previstos.has(nome),
+      hoje: chave === hoje,
+    };
+  });
+}
+
+// ---------- Força estimada e recordes de repetições ----------
+
+/** Acima disso, a fórmula de Epley perde a confiabilidade: é melhor não mostrar nada. */
+const LIMITE_REPS_1RM = 12;
+
+/** Estimativa de 1 repetição máxima (Epley). Serve para comparar treinos, não como carga a testar. */
+export function rmEstimado(peso: number | null, reps: number | null): number | null {
+  if (peso === null || peso <= 0 || reps === null || reps < 1 || reps > LIMITE_REPS_1RM) return null;
+  if (reps === 1) return peso;
+  return Math.round(peso * (1 + reps / 30) * 10) / 10;
+}
+
+export interface PontoRm {
+  rotulo: string;
+  valor: number;
+}
+
+/** O melhor 1RM estimado de cada treino, em ordem cronológica. */
+export function pontosRmEstimado(sessoes: Sessao[], exercicioId: string, nome: string, limite = 30): PontoRm[] {
+  const pontos = emOrdemCronologica(sessoes).flatMap((sessao) => {
+    const valores = sessao.exercicios
+      .filter((e) => e.exercicioId === exercicioId || e.nome === nome)
+      .flatMap((e) => e.series)
+      .filter((s) => s.concluida)
+      .map((s) => rmEstimado(s.peso, s.reps))
+      .filter((v): v is number => v !== null);
+    if (valores.length === 0) return [];
+    return [
+      {
+        rotulo: dataDa(sessao).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+        valor: Math.max(...valores),
+      },
+    ];
+  });
+  return pontos.slice(-limite);
+}
+
+export interface RecordeRecente {
+  nome: string;
+  valor: string;
+  anterior: string;
+  data: string;
+}
+
+const emRepeticoes = (reps: number) => `${reps} reps`;
+
+/** Quem treina com o próprio corpo evolui em repetições: carga nunca contaria o progresso. */
+function recordesDeRepeticoes(sessoes: Sessao[]): RecordeRecente[] {
+  const melhores = new Map<string, number>();
+  const batidos: RecordeRecente[] = [];
+  for (const sessao of emOrdemCronologica(sessoes)) {
+    for (const exercicio of sessao.exercicios) {
+      if (exercicio.medida !== "peso_corporal") continue;
+      const semCarga = exercicio.series.filter((s) => s.concluida && (s.peso ?? 0) === 0 && s.reps !== null);
+      if (semCarga.length === 0) continue;
+      const maior = Math.max(...semCarga.map((s) => s.reps as number));
+      const melhor = melhores.get(exercicio.nome);
+      if (melhor !== undefined && maior > melhor) {
+        batidos.push({
+          nome: exercicio.nome,
+          valor: emRepeticoes(maior),
+          anterior: emRepeticoes(melhor),
+          data: sessao.iniciadaEm,
+        });
+      }
+      if (melhor === undefined || maior > melhor) melhores.set(exercicio.nome, maior);
+    }
+  }
+  return batidos;
+}
+
+/** Recordes de carga e de repetições juntos, mais recente primeiro. */
+export function recordesRecentes(sessoes: Sessao[]): RecordeRecente[] {
+  const deCarga = recordesBatidos(sessoes).map((r) => ({
+    nome: r.nome,
+    valor: formatarKg(r.peso),
+    anterior: formatarKg(r.anterior),
+    data: r.data,
+  }));
+  return [...deCarga, ...recordesDeRepeticoes(sessoes)].sort(
+    (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime(),
+  );
+}
+
+// ---------- Equilíbrio entre grupos musculares ----------
+
+export interface SeriesDoGrupo {
+  id: string;
+  rotulo: string;
+  series: number;
+}
+
+/** Séries feitas nos últimos `dias`, pelo músculo principal de cada exercício. */
+export function seriesPorGrupo(sessoes: Sessao[], dias: number, agora: Date = new Date()): SeriesDoGrupo[] {
+  const fim = somarDias(agora, 1);
+  const contagem = new Map<string, number>();
+  for (const sessao of entre(sessoes, somarDias(fim, -dias), fim)) {
+    for (const exercicio of sessao.exercicios) {
+      const feitas = exercicio.series.filter((s) => s.concluida).length;
+      if (feitas === 0) continue;
+      const grupo = GRUPOS_MUSCULARES.find((g) =>
+        exercicio.primaryMuscles.some((m) => g.musculos.includes(m)),
+      );
+      // Registros antigos podem não ter músculo: não são encaixados em um grupo por palpite.
+      const id = exercicio.medida === "distancia" ? "cardio" : (grupo?.id ?? "outros");
+      contagem.set(id, (contagem.get(id) ?? 0) + feitas);
+    }
+  }
+  const rotulos = new Map(GRUPOS_MUSCULARES.map((g) => [g.id, g.rotulo]));
+  return [...contagem.entries()]
+    .map(([id, series]) => ({ id, rotulo: rotulos.get(id) ?? "Outros", series }))
+    .sort((a, b) => b.series - a.series);
 }

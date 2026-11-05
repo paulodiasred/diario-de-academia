@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { CampoSelect } from "@/components/ui/campo-select";
 import { Input } from "@/components/ui/input";
 import { medidaDoExercicio } from "@/domain/sessao";
-import { formatarKg, formatarTempo, juntarTempo, paraNumeroOuNulo, partesDoTempo } from "@/domain/texto";
+import { resumirConfiguracao } from "@/domain/catalogo";
+import { juntarTempo, paraNumeroOuNulo, partesDoTempo } from "@/domain/texto";
 import type { ExercicioNoTreino, TipoMedida } from "@/types/catalogo";
 import { CATEGORIA_LABEL, MEDIDA_LABEL, MUSCULO_LABEL } from "@/types/catalogo";
 
@@ -56,22 +57,6 @@ const paraNumeroOpcional = (texto: string): number | undefined => {
   const valor = Number(texto.replace(",", "."));
   return Number.isFinite(valor) && valor >= 0 ? valor : undefined;
 };
-
-/** A configuração em uma linha: é o que permite ler a ficha sem abrir cada exercício. */
-function resumirConfiguracao(ex: ExercicioNoTreino): string {
-  const medida = medidaDoExercicio(ex);
-  const partes: string[] = [];
-  if (medida === "carga_reps" || medida === "peso_corporal") {
-    partes.push(ex.repsAlvo ? `${ex.series} × ${ex.repsAlvo}` : `${ex.series} séries`);
-    if (ex.cargaAlvo) partes.push(formatarKg(ex.cargaAlvo));
-  } else {
-    partes.push(`${ex.series} ${ex.series === 1 ? "série" : "séries"}`);
-    if (ex.duracaoAlvoSeg !== undefined) partes.push(formatarTempo(ex.duracaoAlvoSeg));
-    if (ex.distanciaAlvoM !== undefined) partes.push(`${ex.distanciaAlvoM} m`);
-  }
-  partes.push(`${ex.descanso}s de descanso`);
-  return partes.join(" · ");
-}
 
 interface ExercicioEditavelProps {
   exercicio: ExercicioNoTreino;

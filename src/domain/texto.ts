@@ -48,6 +48,12 @@ export function paraNumeroOuNulo(texto: string): number | null {
   return Number.isFinite(valor) && valor >= 0 ? valor : null;
 }
 
+/** Volume alto vira toneladas: "153.600 kg" não cabe no cartão em telas de 360 px. */
+export function formatarVolume(kg: number): string {
+  if (kg < 100_000) return formatarKg(kg);
+  return `${(kg / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} t`;
+}
+
 export function formatarKg(valor: number): string {
   return `${valor.toLocaleString("pt-BR")} kg`;
 }

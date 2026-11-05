@@ -1,14 +1,10 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Plus,
-  Trash2,
-  Copy,
-  Pencil,
-} from "lucide-react";
+import { MoreHorizontal, Plus } from "lucide-react";
 import { EstadoVazio, TelaCarregando } from "@/components/Estados";
 import { Cabecalho } from "@/components/Cabecalho";
 import { BotaoIniciarTreino } from "@/components/treino/BotaoIniciarTreino";
+import { FichaTreinoSheet } from "@/components/treino/FichaTreinoSheet";
 import type { TreinoPersonalizado } from "@/types/catalogo";
 import { Button } from "@/components/ui/button";
 import { CampoSelect } from "@/components/ui/campo-select";
@@ -39,6 +35,7 @@ const MeusTreinos = () => {
   const criarTreinoAtual = useRef(criarTreino);
   criarTreinoAtual.current = criarTreino;
   const [deletandoId, setDeletandoId] = useState<string | null>(null);
+  const [fichaAberta, setFichaAberta] = useState<TreinoPersonalizado | null>(null);
   const [musculo, setMusculo] = useState("");
 
   const musculosDisponiveis = [
@@ -178,6 +175,8 @@ const MeusTreinos = () => {
 
                   return (
                     <div key={treino.id} className="glass-card rounded-xl p-4 space-y-3">
+                      {/* Atalho para o toque. Pelo teclado e leitor de tela, o caminho é o botão de detalhes. */}
+                      <div className="cursor-pointer space-y-3" onClick={() => setFichaAberta(treino)}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <h2 className="font-semibold text-foreground truncate">
@@ -206,6 +205,7 @@ const MeusTreinos = () => {
                           <Chip key={m}>{MUSCULO_LABEL[m] ?? m}</Chip>
                         ))}
                       </div>
+                      </div>
 
                       {/* Ações */}
                       <div className="flex gap-2">
@@ -216,31 +216,11 @@ const MeusTreinos = () => {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="rounded-lg h-11 w-11"
-                          aria-label={`Editar ${treino.nome}`}
-                          onClick={() =>
-                            navigate(`/meus-treinos/editar/${treino.id}`)
-                          }
+                          className="rounded-lg"
+                          aria-label={`Detalhes de ${treino.nome}`}
+                          onClick={() => setFichaAberta(treino)}
                         >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="rounded-lg h-11 w-11"
-                          aria-label={`Duplicar ${treino.nome}`}
-                          onClick={() => handleDuplicar(treino)}
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="rounded-lg h-11 w-11 text-destructive border-destructive/30 hover:bg-destructive/10"
-                          aria-label={`Excluir ${treino.nome}`}
-                          onClick={() => setDeletandoId(treino.id!)}
-                        >
-                          <Trash2 className="w-4 h-4" />
+                          <MoreHorizontal />
                         </Button>
                       </div>
                     </div>
@@ -251,6 +231,19 @@ const MeusTreinos = () => {
           </>
         </div>
       </div>
+
+      <FichaTreinoSheet
+        treino={fichaAberta}
+        onFechar={() => setFichaAberta(null)}
+        onDuplicar={(treino) => {
+          setFichaAberta(null);
+          void handleDuplicar(treino);
+        }}
+        onExcluir={(treino) => {
+          setFichaAberta(null);
+          setDeletandoId(treino.id ?? null);
+        }}
+      />
 
       <AlertDialog
         open={!!deletandoId}
