@@ -7,6 +7,7 @@ const NOME_DO_APP = "Diário de Academia";
 
 const TITULOS: Array<[RegExp, string]> = [
   [/^\/$/, "Início"],
+  [/^\/entrar$/, "Início"],
   [/^\/meus-treinos$/, "Meus treinos"],
   [/^\/meus-treinos\/criar$/, "Novo treino"],
   [/^\/meus-treinos\/modelos$/, "Modelos de treino"],

@@ -1,10 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { Cabecalho } from "@/components/Cabecalho";
+import { buttonVariants } from "@/components/ui/button";
 import { COMPARACAO_PLANOS } from "@/domain/planos";
+import { useAuth } from "@/hooks/useAuth";
 import { usePlano } from "@/hooks/usePlano";
+import { linkPedidoPremium } from "@/lib/contato";
+import { cn } from "@/lib/utils";
 
 const Planos = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { premium } = usePlano();
 
   return (
@@ -37,10 +42,18 @@ const Planos = () => {
       </section>
 
       {!premium && (
-        <p className="text-sm text-muted-foreground">
-          O Premium ainda não está à venda: nenhuma cobrança é feita. Durante o beta, o acesso é
-          liberado manualmente.
-        </p>
+        <section aria-label="Pedir o Premium" className="glass-card rounded-xl p-4 space-y-3">
+          <div>
+            <h2 className="font-semibold">Quer testar o Premium?</h2>
+            <p className="text-sm text-muted-foreground">
+              O Premium ainda não está à venda: nenhuma cobrança é feita. Durante o beta, o acesso é
+              liberado a pedido.
+            </p>
+          </div>
+          <a href={linkPedidoPremium(user?.email)} className={cn(buttonVariants(), "w-full")}>
+            Pedir acesso por email
+          </a>
+        </section>
       )}
     </div>
   );

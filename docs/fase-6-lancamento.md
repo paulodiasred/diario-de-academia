@@ -79,7 +79,7 @@ Medido com Lighthouse, em simulação de celular médio com 4G, no build.
 
 **Backup:** no Google Cloud, configure backups agendados do Firestore. Confira na documentação atual se o seu plano permite. A exportação em JSON do app é por usuário e não substitui um backup do banco.
 
-**Monitoramento de erros:** escolha um serviço, como o Sentry, e crie a conta. A integração é pequena, e pode ser ligada no `ErrorBoundary`. Como isso envia dados de erro a terceiros, o serviço precisa entrar na política de privacidade.
+**Monitoramento de erros:** a integração com o Sentry já está no app e na política de privacidade, mas fica desligada até existir a chave. Crie o projeto no Sentry e defina `VITE_SENTRY_DSN` nas variáveis do Render. Não são enviados nome, email, cliques nem dados de treino.
 
 **App Check:** não está no código, porque pesava 200 KB na abertura mesmo sem uso. Para ativar: crie a chave do reCAPTCHA, adicione o App Check ao app, publique, acompanhe as métricas no Console e só depois exija nas regras. Exigir antes bloqueia todo mundo. Também entra na política de privacidade.
 

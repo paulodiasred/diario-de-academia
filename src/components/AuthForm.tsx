@@ -48,6 +48,8 @@ export function AuthForm() {
     document.title = 'Entrar · Diário de Academia';
   }, []);
 
+  // A página pública leva direto ao cadastro.
+  const abaInicial = new URLSearchParams(window.location.search).get('modo') === 'cadastro' ? 'signup' : 'signin';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -113,7 +115,9 @@ export function AuthForm() {
   return (
     <main className="min-h-screen max-w-md mx-auto p-6 flex flex-col justify-center">
       <div className="text-center mb-8">
-        <img src="/logo.svg" alt="" className="w-16 h-16 mx-auto mb-4" />
+        <a href="/" aria-label="Sobre o Diário de Academia" className="inline-block">
+          <img src="/logo.svg" alt="" className="w-16 h-16 mx-auto mb-4" />
+        </a>
         <h1 className="text-3xl font-bold mb-2">Diário de Academia</h1>
         <p className="text-muted-foreground">Seu treino, sua evolução, seus resultados.</p>
       </div>
@@ -144,7 +148,7 @@ export function AuthForm() {
         </div>
       </div>
 
-      <Tabs defaultValue="signin" className="w-full">
+      <Tabs defaultValue={abaInicial} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="signin">Entrar</TabsTrigger>
           <TabsTrigger value="signup">Cadastrar</TabsTrigger>

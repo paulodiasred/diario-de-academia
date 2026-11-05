@@ -1,8 +1,8 @@
 import { useEffect, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
+import { EMAIL_CONTATO } from "@/lib/contato";
 
-// Público de propósito: é o canal para pedidos sobre dados. Para trocar sem mexer no código, defina VITE_CONTATO_EMAIL.
-const CONTATO = (import.meta.env.VITE_CONTATO_EMAIL as string | undefined) || "pauloalberto13@gmail.com";
+const CONTATO = EMAIL_CONTATO;
 const ATUALIZADO_EM = "novembro de 2026";
 
 const Contato = () => (
@@ -58,6 +58,11 @@ export function Privacidade() {
         <ul>
           <li>Google Firebase: login e banco de dados. Pode haver armazenamento fora do Brasil.</li>
           <li>Render: hospedagem do site.</li>
+          <li>
+            Sentry: relatórios de erros técnicos, com a mensagem do erro, o navegador e a tela em que aconteceu,
+            para corrigir falhas. Não enviamos seu email, seu nome nem seus treinos. Pode haver armazenamento
+            fora do Brasil.
+          </li>
           <li>No seu aparelho: uma cópia para o app funcionar sem internet, apagada quando você sai da conta.</li>
         </ul>
       </section>

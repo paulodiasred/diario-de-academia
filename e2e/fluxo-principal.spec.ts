@@ -25,7 +25,7 @@ test.beforeEach(async ({ context }) => {
 
 async function criarConta(page: Page) {
   const email = emailNovo();
-  await page.goto("/");
+  await page.goto("/entrar");
   await page.getByRole("tab", { name: "Cadastrar" }).click();
   await page.locator("#signup-email").fill(email);
   await page.locator("#signup-password").fill(SENHA);
@@ -36,7 +36,7 @@ async function criarConta(page: Page) {
 }
 
 async function entrar(page: Page, email: string) {
-  await page.goto("/");
+  await page.goto("/entrar");
   await page.locator("#signin-email").fill(email);
   await page.locator("#signin-password").fill(SENHA);
   await page.getByRole("button", { name: "Entrar", exact: true }).click();
@@ -598,7 +598,7 @@ test.describe("planos, metas e dados", () => {
     gravarComoAdmin(request, `entitlements/${uid}`, { plano: { stringValue: "premium" } });
 
   test("onboarding: define a meta e leva a criar o primeiro treino", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/entrar");
     await page.getByRole("tab", { name: "Cadastrar" }).click();
     await page.locator("#signup-email").fill(emailNovo());
     await page.locator("#signup-password").fill(SENHA);
@@ -822,7 +822,7 @@ test.describe("conta", () => {
   });
 
   test("senha errada mostra mensagem em português", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/entrar");
     await page.locator("#signin-email").fill("ninguem@exemplo.com");
     await page.locator("#signin-password").fill("senha-errada");
     await page.getByRole("button", { name: "Entrar", exact: true }).click();
@@ -1012,7 +1012,7 @@ test.describe("primeiro treino", () => {
   const LISTA = (page: Page) => page.getByRole("dialog");
 
   test("do onboarding ao treino em 3 toques, com um modelo", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/entrar");
     await page.getByRole("tab", { name: "Cadastrar" }).click();
     await page.locator("#signup-email").fill(emailNovo());
     await page.locator("#signup-password").fill(SENHA);
@@ -1495,7 +1495,7 @@ test.describe("acessibilidade e padrões", () => {
   }
 
   test("cada tela tem título próprio, e o foco acompanha a navegação", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/entrar");
     await expect(page).toHaveTitle(/^Entrar · /);
     await criarConta(page);
     await expect(page).toHaveTitle("Início · Diário de Academia");
@@ -1513,7 +1513,7 @@ test.describe("acessibilidade e padrões", () => {
   });
 
   test("login: gerenciador de senhas entende os campos, e dá para ver a senha", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/entrar");
     await expect(page.locator("#signin-email")).toHaveAttribute("autocomplete", "email");
     const senha = page.locator("#signin-password");
     await expect(senha).toHaveAttribute("autocomplete", "current-password");
@@ -1554,7 +1554,7 @@ test.describe("acessibilidade e padrões", () => {
   });
 
   test("mensagem de erro dá tempo de ler", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/entrar");
     await page.locator("#signin-email").fill("ninguem@exemplo.com");
     await page.locator("#signin-password").fill("senha-errada");
     await page.getByRole("button", { name: "Entrar", exact: true }).click();
@@ -1596,6 +1596,105 @@ test.describe("sinal ruim na academia", () => {
     await page.waitForTimeout(3000);
     await expect(page.getByRole("button", { name: /Continuar Treino de teste/ })).toBeHidden();
     await expect(page.getByRole("heading", { name: "Último treino" })).toBeVisible();
+  });
+});
+
+test.describe("pronto para vender", () => {
+  test("quem chega sem conta entende o produto e vai direto ao cadastro", async ({ page }) => {
+    await page.goto("/");
+    await expect(page).toHaveTitle(/^Diário de Academia: /);
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("ficha de treino");
+    await expect(page.locator("#signin-email")).toHaveCount(0);
+
+    await page.getByRole("link", { name: "Criar conta grátis" }).first().click();
+    await expect(page).toHaveURL(/\/entrar\?modo=cadastro$/);
+    await expect(page.locator("#signup-email")).toBeVisible();
+  });
+
+  test("Já tenho conta leva ao login, e quem entra por /entrar vai para o início", async ({ page }) => {
+    const email = await criarConta(page);
+    await page.goto("/entrar");
+    await expect(page).toHaveURL(/\/$/);
+    await page.goto("/conta");
+    await page.getByRole("button", { name: "Sair da conta" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Sair", exact: true }).click();
+    // Sair não leva de volta à propaganda: leva ao login.
+    await expect(page).toHaveURL(/\/entrar$/, { timeout: 15_000 });
+    await expect(page.locator("#signin-email")).toBeVisible();
+
+    await page.goto("/");
+    await page.getByRole("link", { name: "Já tenho conta" }).click();
+    await page.locator("#signin-email").fill(email);
+    await page.locator("#signin-password").fill(SENHA);
+    await page.getByRole("button", { name: "Entrar", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Ajustes" })).toBeVisible();
+  });
+
+  for (const tema of ["dark", "light"]) {
+    test(`página pública sem violações graves e sem rolagem lateral, tema ${tema}`, async ({ page }) => {
+      await page.addInitScript((t) => localStorage.setItem("theme", t), tema);
+      for (const [largura, altura] of [[320, 568], [360, 640], [768, 1024], [1366, 768]]) {
+        await page.setViewportSize({ width: largura, height: altura });
+        await page.goto("/");
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        expect(sobra, `rolagem lateral em ${largura}`).toBeLessThanOrEqual(0);
+      }
+      const { violations } = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
+      const graves = violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id);
+      expect(graves).toEqual([]);
+    });
+  }
+
+  test("o Premium é pedido por email, já com a conta na mensagem", async ({ page }) => {
+    const email = await criarConta(page);
+    await page.goto("/planos");
+    const link = page.getByRole("link", { name: "Pedir acesso por email" });
+    const destino = decodeURIComponent((await link.getAttribute("href")) as string);
+    expect(destino).toMatch(/^mailto:/);
+    expect(destino).toContain(email);
+  });
+
+  test("convite para instalar aparece depois do treino, uma vez só", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page);
+    const treinar = async () => {
+      await page.goto("/meus-treinos");
+      await iniciar(page);
+      await page.getByLabel("Peso da série 1 em kg").fill("20");
+      await concluir(page, 1);
+      // O navegador só avisa que o app pode ser instalado quando quer: aqui, o aviso é simulado.
+      await page.evaluate(() => {
+        const evento = new Event("beforeinstallprompt") as Event & { prompt: () => Promise<void>; userChoice: Promise<unknown> };
+        evento.prompt = async () => undefined;
+        evento.userChoice = Promise.resolve({ outcome: "dismissed" });
+        window.dispatchEvent(evento);
+      });
+      await finalizar(page);
+    };
+    await treinar();
+    const convite = page.getByRole("region", { name: "Instalar o app" });
+    await expect(convite).toBeVisible();
+    await convite.getByRole("button", { name: "Agora não" }).click();
+    await expect(convite).toBeHidden();
+
+    await page.getByRole("button", { name: "Concluir", exact: true }).click();
+    await treinar();
+    await expect(convite).toBeHidden();
+  });
+
+  test("resumo aberto pelo histórico não convida a instalar", async ({ page }) => {
+    await criarConta(page);
+    await criarTreino(page);
+    await page.goto("/meus-treinos");
+    await iniciar(page);
+    await page.getByLabel("Peso da série 1 em kg").fill("20");
+    await concluir(page, 1);
+    await finalizar(page);
+    await page.goto("/evolucao?aba=historico");
+    await page.getByRole("button", { name: /^Treino de teste/ }).click();
+    await expect(page.getByText("Treino concluído")).toBeHidden();
+    await expect(page.getByRole("region", { name: "Instalar o app" })).toBeHidden();
   });
 });
 
@@ -1742,7 +1841,7 @@ test.describe("início e evolução", () => {
 
 test.describe("lançamento", () => {
   test("termos e privacidade abrem sem login, e o cadastro aponta para eles", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/entrar");
     await page.getByRole("tab", { name: "Cadastrar" }).click();
     await page.getByRole("link", { name: "política de privacidade" }).click();
     await expect(page.getByRole("heading", { name: "Política de privacidade" })).toBeVisible();
@@ -1802,6 +1901,10 @@ test.describe("lançamento", () => {
       };
 
       await page.goto("/");
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await analisar("página pública");
+
+      await page.goto("/entrar");
       await expect(page.locator("#signin-email")).toBeVisible();
       await analisar("login");
 

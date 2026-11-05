@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { guardarPlano, lerPlanoGuardado } from "@/data/repositories/planoLocal";
 import { lerAssinatura, lerContadores } from "@/data/repositories/planoRepository";
 import {
   PLANO_GRATUITO,
@@ -32,7 +34,14 @@ export function usePlano() {
     enabled: !!uid,
   });
 
-  const premium = temPremium(assinatura.data ?? PLANO_GRATUITO);
+  const confirmada = assinatura.data;
+  useEffect(() => {
+    if (uid && confirmada) guardarPlano(uid, confirmada);
+  }, [uid, confirmada]);
+
+  // Falha de leitura não é mudança de plano: vale o último confirmado neste aparelho.
+  const guardada = assinatura.isError && uid ? lerPlanoGuardado(uid) : null;
+  const premium = temPremium(confirmada ?? guardada ?? PLANO_GRATUITO);
   const uso = contadores.data ?? SEM_USO;
 
   return {

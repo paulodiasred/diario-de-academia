@@ -40,7 +40,7 @@ export default defineConfig({
       workbox: {
         // Só o app: 34 MB de fotos nunca são baixados de antemão.
         globPatterns: ["**/*.{js,css,html,woff2,svg,png}"],
-        globIgnores: ["**/exercises-img/**", "**/og-image.png", "**/placeholder.svg"],
+        globIgnores: ["**/exercises-img/**", "**/og-image.png", "**/placeholder.svg", "**/landing-treino.png"],
         navigateFallback: "/index.html",
         runtimeCaching: [
           {

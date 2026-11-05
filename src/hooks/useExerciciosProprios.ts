@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { relatarErro } from "@/lib/monitoramento";
 import { toast } from "@/lib/aviso";
 import {
   excluirExercicioProprio,
@@ -28,6 +29,7 @@ export function useExerciciosProprios() {
 
   const aoFalhar = (mensagem: string) => (erro: unknown) => {
     console.error(mensagem, erro);
+    relatarErro(erro, { acao: mensagem });
     toast.error(mensagem);
     void queryClient.invalidateQueries({ queryKey: chave });
     plano.sincronizarUso();
@@ -57,5 +59,11 @@ export function useExerciciosProprios() {
     excluirExercicioProprio(uid, id, descontar).catch(aoFalhar("Não foi possível excluir o exercício."));
   };
 
-  return { exercicios: consulta.data ?? VAZIO, salvar, excluir };
+  return {
+    exercicios: consulta.data ?? VAZIO,
+    erro: consulta.isError,
+    recarregar: () => consulta.refetch(),
+    salvar,
+    excluir,
+  };
 }

@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 // O banco de dados e as telas só carregam depois do login: a primeira tela abre mais rápido.
 const AreaLogada = lazy(() => import("./AreaLogada"));
+const Landing = lazy(() => import("./pages/Landing"));
 const Privacidade = lazy(() => import("./pages/Legal").then((m) => ({ default: m.Privacidade })));
 const Termos = lazy(() => import("./pages/Legal").then((m) => ({ default: m.Termos })));
 
@@ -41,7 +42,18 @@ function AppContent() {
   }
 
   if (loading) return <TelaCarregando />;
-  if (!user) return <AuthForm />;
+  if (!user) {
+    // Quem abre o app instalado já decidiu: vai direto para o login.
+    const instalado = window.matchMedia?.("(display-mode: standalone)").matches;
+    if (caminho === "/" && !instalado) {
+      return (
+        <Suspense fallback={<TelaCarregando />}>
+          <Landing />
+        </Suspense>
+      );
+    }
+    return <AuthForm />;
+  }
 
   return (
     <Suspense fallback={<TelaCarregando />}>

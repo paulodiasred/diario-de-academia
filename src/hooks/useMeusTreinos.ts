@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { relatarErro } from "@/lib/monitoramento";
 import { toast } from "@/lib/aviso";
 import type { TreinoPersonalizado } from "@/types/catalogo";
 import * as repositorio from "@/data/repositories/treinosRepository";
@@ -29,6 +30,7 @@ export function useMeusTreinos() {
 
   const aoFalhar = (mensagem: string) => (erro: unknown) => {
     console.error(mensagem, erro);
+    relatarErro(erro, { acao: mensagem });
     toast.error(mensagem);
     void queryClient.invalidateQueries({ queryKey: chave });
     plano.sincronizarUso();

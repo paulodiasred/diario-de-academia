@@ -81,6 +81,8 @@ function Conteudo() {
           ) : (
             <Routes>
               <Route path="/" element={<Index />} />
+              {/* Depois do login, o endereço de entrada não existe mais. */}
+              <Route path="/entrar" element={<Navigate to="/" replace />} />
               <Route path="/meus-treinos" element={<MeusTreinos />} />
               <Route path="/meus-treinos/criar" element={<CriarEditarTreino />} />
               <Route path="/meus-treinos/modelos" element={<Modelos />} />

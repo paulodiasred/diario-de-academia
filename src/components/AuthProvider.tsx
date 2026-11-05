@@ -4,6 +4,7 @@ import {
   deleteUser,
   EmailAuthProvider,
   getAdditionalUserInfo,
+  getRedirectResult,
   onAuthStateChanged,
   reauthenticateWithCredential,
   reauthenticateWithPopup,
@@ -18,6 +19,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { AuthContext } from '@/contexts/AuthContext';
+import { limparPlanosGuardados } from '@/data/repositories/planoLocal';
 import { limparRascunhosFormulario } from '@/data/repositories/rascunhoFormulario';
 import { codigoDoErro } from '@/domain/errosAuth';
 
@@ -30,6 +32,7 @@ async function encerrarNoAparelho() {
   const { limparDadosLocais } = await carregarFirestore();
   limparRascunhosLocais();
   limparRascunhosFormulario();
+  limparPlanosGuardados();
   try {
     await limparDadosLocais();
   } catch (error) {
@@ -37,7 +40,7 @@ async function encerrarNoAparelho() {
     console.warn('Não foi possível limpar os dados locais:', error);
   }
   // O Firestore foi encerrado: recarregar é o que permite usar o app de novo.
-  window.location.assign('/');
+  window.location.assign('/entrar');
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -52,6 +55,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return unsubscribe;
+  }, []);
+
+  // No celular, o login com Google pode voltar por redirecionamento: conta nova também vê o onboarding.
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((resultado) => {
+        if (resultado && getAdditionalUserInfo(resultado)?.isNewUser) setNovoCadastro(true);
+      })
+      .catch((erro) => console.warn('Retorno do login com Google:', erro));
   }, []);
 
   const signIn = async (email: string, password: string) => {

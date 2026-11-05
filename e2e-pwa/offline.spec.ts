@@ -19,7 +19,7 @@ test.beforeEach(async ({ context }) => {
 
 async function criarContaETreino(page: Page) {
   const email = `pwa-${Date.now()}@exemplo.com`;
-  await page.goto("/");
+  await page.goto("/entrar");
   await page.getByRole("tab", { name: "Cadastrar" }).click();
   await page.locator("#signup-email").fill(email);
   await page.locator("#signup-password").fill(SENHA);

@@ -44,7 +44,7 @@ export function exerciciosSemelhantes(
 }
 
 export function useCatalogoExercicios() {
-  const { exercicios: proprios } = useExerciciosProprios();
+  const { exercicios: proprios, erro: erroProprios, recarregar: recarregarProprios } = useExerciciosProprios();
   const [filtros, setFiltros] = useState<FiltrosCatalogo>(SEM_FILTROS);
 
   const todos = useMemo(() => [...proprios, ...catalogo], [proprios]);
@@ -87,6 +87,8 @@ export function useCatalogoExercicios() {
     niveis,
     equipamentos,
     limparFiltros,
+    erroProprios,
+    recarregarProprios,
     total: exerciciosFiltrados.length,
   };
 }

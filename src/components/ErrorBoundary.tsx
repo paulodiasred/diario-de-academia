@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { relatarErro } from "@/lib/monitoramento";
 
 interface Props {
   children: ReactNode;
@@ -18,6 +19,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(erro: Error, info: ErrorInfo) {
     console.error("Erro não tratado na interface:", erro, info.componentStack);
+    relatarErro(erro, { componentes: info.componentStack ?? "" });
   }
 
   render() {

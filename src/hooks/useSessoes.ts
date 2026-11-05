@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { relatarErro } from "@/lib/monitoramento";
 import { toast } from "@/lib/aviso";
 import { excluirSessao, listarSessoes, regravarSessao } from "@/data/repositories/sessoesRepository";
 import type { Sessao } from "@/domain/sessao";
@@ -24,6 +25,7 @@ export function useSessoes() {
 
   const aoFalhar = (mensagem: string) => (erro: unknown) => {
     console.error(mensagem, erro);
+    relatarErro(erro, { acao: mensagem });
     toast.error(mensagem);
     void queryClient.invalidateQueries({ queryKey: chave });
   };

@@ -4,6 +4,7 @@ import { Pencil, Share2, Trash2, Trophy } from "lucide-react";
 import { toast } from "@/lib/aviso";
 import { textoParaCompartilhar } from "@/domain/exportacao";
 import { TelaCarregando } from "@/components/Estados";
+import { ConviteInstalar } from "@/components/treino/ConviteInstalar";
 import { CorrigirTreinoSheet } from "@/components/treino/CorrigirTreinoSheet";
 import {
   AlertDialog,
@@ -147,6 +148,8 @@ const ResumoTreino = () => {
           Compartilhar
         </Button>
       </div>
+
+      {!deHistorico && <ConviteInstalar />}
 
       <Button className="w-full h-12" onClick={sair}>
         {deHistorico ? "Voltar" : "Concluir"}

@@ -24,6 +24,7 @@ import {
   type Sessao,
 } from "@/domain/sessao";
 import { useAuth } from "@/hooks/useAuth";
+import { relatarErro } from "@/lib/monitoramento";
 import { chaveSessoes } from "@/hooks/useSessoes";
 import type { TreinoPersonalizado } from "@/types/catalogo";
 
@@ -141,6 +142,7 @@ export function SessaoAtivaProvider({ children }: { children: ReactNode }) {
     gravarSessaoFinalizada(uid, final).catch((erro) => {
       // O servidor recusou: devolve o treino em andamento para nada se perder.
       console.error("Erro ao finalizar o treino:", erro);
+      relatarErro(erro, { acao: "finalizar treino" });
       queryClient.setQueryData<Sessao[]>(chaveSessoes(uid), (lista = []) =>
         lista.filter((s) => s.id !== final.id),
       );

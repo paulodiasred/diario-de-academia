@@ -31,7 +31,7 @@ const rotulosMusculos = (musculos: string[]) =>
   musculos.map((m) => MUSCULO_LABEL[m] ?? m).join(", ");
 
 const Exercicios = () => {
-  const { todos, exerciciosFiltrados, filtros, setFiltros, musculos, total } =
+  const { todos, exerciciosFiltrados, filtros, setFiltros, musculos, total, erroProprios, recarregarProprios } =
     useCatalogoExercicios();
   const { excluir } = useExerciciosProprios();
   const [detalhe, setDetalhe] = useState<ExercicioCatalogo | null>(null);
@@ -53,6 +53,15 @@ const Exercicios = () => {
           Criar
         </Button>
       </Cabecalho>
+
+      {erroProprios && (
+        <div role="alert" className="glass-card rounded-xl p-3 flex items-center gap-3">
+          <p className="flex-1 text-sm">Não foi possível carregar seus exercícios próprios. Eles continuam salvos.</p>
+          <Button variant="outline" onClick={() => void recarregarProprios()}>
+            Tentar de novo
+          </Button>
+        </div>
+      )}
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
