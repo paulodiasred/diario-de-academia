@@ -1,4 +1,5 @@
 import { build } from "esbuild";
+import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -16,3 +17,9 @@ await build({
   alias: { "@": path.join(aqui, "../src") },
   logLevel: "warning",
 });
+
+// Sem este arquivo, o emulador procura a chave no Google Cloud a cada função e trava a primeira
+// chamada até desistir. Ele só vale nos emuladores, fica fora do git e não é publicado. Uma chave
+// real colocada aqui para testes locais nunca é sobrescrita.
+const segredoLocal = path.join(aqui, ".secret.local");
+if (!existsSync(segredoLocal)) writeFileSync(segredoLocal, "ANTHROPIC_API_KEY=simulada-so-nos-emuladores\n");

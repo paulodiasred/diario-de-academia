@@ -1,10 +1,10 @@
 import { deleteDoc, doc, getDoc } from "firebase/firestore";
-import { analisesUsadas, type RespostaDaAnalise } from "@/domain/analiseTreinos";
-import { app, usarEmulador } from "@/lib/firebase";
+import { usadasNoMes, type RecursoDeIA, type RespostaDaAnalise } from "@/domain/analiseTreinos";
+import type { PreferenciasFicha } from "@/domain/fichaIA";
+import type { ModeloTreino } from "@/domain/modelosTreino";
 import { db } from "@/lib/firestore";
+import { chamarFuncao } from "@/lib/funcoes";
 import { paraIso } from "./registrosRepository";
-
-const REGIAO = "southamerica-east1";
 
 export interface AnaliseGuardada extends RespostaDaAnalise {
   criadaEm: string;
@@ -29,15 +29,21 @@ export function apagarAnalise(uid: string): Promise<void> {
   return deleteDoc(refAnalise(uid));
 }
 
-export async function lerAnalisesUsadas(uid: string): Promise<number> {
+/** Análises e fichas usadas neste mês. */
+export async function lerUsoDeIA(uid: string): Promise<Record<RecursoDeIA, number>> {
   const snap = await getDoc(doc(db, "users", uid, "uso", "ia"));
-  return analisesUsadas(snap.exists() ? snap.data() : null);
+  const uso = snap.exists() ? snap.data() : null;
+  return { analises: usadasNoMes(uso, "analises"), fichas: usadasNoMes(uso, "fichas") };
 }
 
-/** O SDK de funções só carrega aqui: quem não usa a análise não baixa esse código. */
-export async function pedirAnalise(): Promise<void> {
-  const { connectFunctionsEmulator, getFunctions, httpsCallable } = await import("firebase/functions");
-  const funcoes = getFunctions(app, REGIAO);
-  if (usarEmulador) connectFunctionsEmulator(funcoes, "127.0.0.1", 5001);
-  await httpsCallable(funcoes, "analisarMeusTreinos", { timeout: 120_000 })({ consentiu: true });
+export async function lerAnalisesUsadas(uid: string): Promise<number> {
+  return (await lerUsoDeIA(uid)).analises;
+}
+
+export function pedirAnalise(): Promise<unknown> {
+  return chamarFuncao("analisarMeusTreinos", { consentiu: true });
+}
+
+export function pedirFicha(preferencias: PreferenciasFicha): Promise<ModeloTreino> {
+  return chamarFuncao("montarMinhaFicha", { consentiu: true, preferencias });
 }

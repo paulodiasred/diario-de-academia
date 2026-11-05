@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Check, ClipboardList, LineChart, WifiOff } from "lucide-react";
 import { EMAIL_CONTATO } from "@/lib/contato";
+import { fichasIaAtiva } from "@/lib/recursos";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +47,10 @@ const PERGUNTAS = [
   {
     pergunta: "O app monta o treino para mim?",
     resposta:
-      "Ele oferece modelos comuns como ponto de partida, mas não prescreve treinos nem substitui um profissional de educação física.",
+      // A versão com IA depende de revisão jurídica: só aparece com o recurso ligado.
+      fichasIaAtiva
+        ? "Ele oferece modelos comuns e, no Premium, uma sugestão de ficha feita por IA a partir das suas respostas. As duas são pontos de partida para revisar: não substituem a avaliação de um profissional de educação física."
+        : "Ele oferece modelos comuns como ponto de partida, mas não prescreve treinos nem substitui um profissional de educação física.",
   },
 ];
 

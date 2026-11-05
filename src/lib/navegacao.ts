@@ -11,6 +11,7 @@ const TITULOS: Array<[RegExp, string]> = [
   [/^\/meus-treinos$/, "Meus treinos"],
   [/^\/meus-treinos\/criar$/, "Novo treino"],
   [/^\/meus-treinos\/modelos$/, "Modelos de treino"],
+  [/^\/meus-treinos\/ficha-ia$/, "Montar com IA"],
   [/^\/meus-treinos\/editar\//, "Editar treino"],
   [/^\/treino$/, "Treino em andamento"],
   [/^\/treino\/resumo\//, "Resumo do treino"],

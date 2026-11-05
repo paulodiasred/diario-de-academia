@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DadosDaAnalise } from "@/domain/analiseTreinos";
-import { ErroDaAnalise } from "./analisar";
-import { gerarComClaude, gerarSimulado, INSTRUCOES, MODELO_PADRAO, type OpcoesDoClaude } from "./claude";
+import { ErroDaIA } from "./erros";
+import { gerarComClaude, gerarSimulado, INSTRUCOES_ANALISE, MODELO_PADRAO, type OpcoesDoClaude } from "./claude";
 
 const VAZIO = { treinos: 4, diasAtivos: 4, series: 12, volumeKg: 1000, minutos: 100 };
 const DADOS: DadosDaAnalise = {
@@ -33,14 +33,14 @@ describe("chamada ao Claude", () => {
     const { analise, modelo } = await gerarComClaude(DADOS, { cliente, aoMedirUso });
     expect(analise.resumo).toBe("Bom período.");
     expect(modelo).toBe(MODELO_PADRAO);
-    expect(aoMedirUso).toHaveBeenCalledWith({ modelo: MODELO_PADRAO, entrada: 10, saida: 20 });
+    expect(aoMedirUso).toHaveBeenCalledWith({ tarefa: "analise", modelo: MODELO_PADRAO, entrada: 10, saida: 20 });
   });
 
   it("os dados vão na mensagem, e as instruções ficam fixas no system", async () => {
     const { cliente, parse } = clienteCom(RESPOSTA);
     await gerarComClaude(DADOS, { cliente });
     const pedido = parse.mock.calls[0][0];
-    expect(pedido.system).toBe(INSTRUCOES);
+    expect(pedido.system).toBe(INSTRUCOES_ANALISE);
     const [mensagem] = pedido.messages as Array<{ content: string }>;
     expect(mensagem.content).toContain(`"treinos":4`);
     expect(pedido.fallbacks).toBe("default");
@@ -65,7 +65,7 @@ describe("chamada ao Claude", () => {
   ])("%s vira erro compreensível", async (_nome, resposta) => {
     const { cliente } = clienteCom(resposta);
     const erro = await gerarComClaude(DADOS, { cliente }).catch((e) => e);
-    expect(erro).toBeInstanceOf(ErroDaAnalise);
+    expect(erro).toBeInstanceOf(ErroDaIA);
     expect(erro.codigo).toBe("unavailable");
   });
 

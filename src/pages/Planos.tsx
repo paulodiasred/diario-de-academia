@@ -1,8 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { Cabecalho } from "@/components/Cabecalho";
 import { buttonVariants } from "@/components/ui/button";
-import { COMPARACAO_PLANOS, LINHA_ANALISE_IA } from "@/domain/planos";
-import { iaAtiva } from "@/lib/recursos";
+import { COMPARACAO_PLANOS, LINHA_ANALISE_IA, LINHA_FICHA_IA } from "@/domain/planos";
+import { fichasIaAtiva, iaAtiva } from "@/lib/recursos";
+
+// A tabela só mostra o que existe de verdade neste ambiente.
+const LINHAS = [
+  ...COMPARACAO_PLANOS,
+  ...(iaAtiva ? [LINHA_ANALISE_IA] : []),
+  ...(fichasIaAtiva ? [LINHA_FICHA_IA] : []),
+];
 import { useAuth } from "@/hooks/useAuth";
 import { usePlano } from "@/hooks/usePlano";
 import { linkPedidoPremium } from "@/lib/contato";
@@ -31,7 +38,7 @@ const Planos = () => {
             </tr>
           </thead>
           <tbody>
-            {(iaAtiva ? [...COMPARACAO_PLANOS, LINHA_ANALISE_IA] : COMPARACAO_PLANOS).map((linha) => (
+            {LINHAS.map((linha) => (
               <tr key={linha.recurso} className="border-t border-border/60 align-top">
                 <td className="p-3">{linha.recurso}</td>
                 <td className="p-3 text-muted-foreground">{linha.gratuito}</td>

@@ -7,8 +7,9 @@ export const LIMITES_GRATUITO = {
   exercicios: 10,
 } as const;
 
-/** Garantida pela Cloud Function, que é quem paga cada análise. */
+/** Cotas do Premium, garantidas pelas Cloud Functions, que pagam cada chamada à IA. */
 export const COTA_MENSAL_DE_ANALISES = 10;
+export const COTA_MENSAL_DE_FICHAS = 5;
 
 export type RecursoLimitado = keyof typeof LIMITES_GRATUITO;
 
@@ -50,6 +51,12 @@ export const LINHA_ANALISE_IA = {
   recurso: "Análise dos treinos com IA",
   gratuito: "Não",
   premium: `Até ${COTA_MENSAL_DE_ANALISES} por mês`,
+};
+
+export const LINHA_FICHA_IA = {
+  recurso: "Ficha montada por IA",
+  gratuito: "Não",
+  premium: `Até ${COTA_MENSAL_DE_FICHAS} por mês`,
 };
 
 /** Comparação mostrada na tela de planos. Só lista o que existe de verdade no app. */

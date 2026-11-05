@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { EMAIL_CONTATO } from "@/lib/contato";
-import { iaAtiva } from "@/lib/recursos";
+import { fichasIaAtiva, iaAtiva } from "@/lib/recursos";
 
 const CONTATO = EMAIL_CONTATO;
 const ATUALIZADO_EM = "novembro de 2026";
@@ -64,12 +64,14 @@ export function Privacidade() {
             para corrigir falhas. Não enviamos seu email, seu nome nem seus treinos. Pode haver armazenamento
             fora do Brasil.
           </li>
-          {iaAtiva && (
+          {(iaAtiva || fichasIaAtiva) && (
             <li>
-              Anthropic: só se você pedir uma análise com IA, no Premium, e confirmar o envio. Recebe os totais do
-              período e o nome, as cargas e as repetições dos seus exercícios, sem seu nome, seu email, suas
-              observações ou os nomes dos seus treinos. Fica fora do Brasil. A última análise fica guardada na sua
-              conta até você apagá-la ou gerar outra.
+              Anthropic, empresa que opera a IA, fora do Brasil. Só recebe dados quando você usa um recurso de IA do
+              Premium.
+              {iaAtiva &&
+                " Na análise, depois de você confirmar o envio: os totais do período e o nome, as cargas e as repetições dos seus exercícios, sem seu nome, seu email, suas observações ou os nomes dos seus treinos. A última análise fica guardada na sua conta até você apagá-la ou gerar outra."}
+              {fichasIaAtiva &&
+                " Na ficha montada por IA: só as respostas do formulário (objetivo, dias por semana, local e experiência), sem nenhum dado da conta ou dos treinos. A ficha não é guardada até você decidir salvá-la."}
             </li>
           )}
           <li>No seu aparelho: uma cópia para o app funcionar sem internet, apagada quando você sai da conta.</li>
@@ -113,12 +115,24 @@ export function Termos() {
       </section>
       <section>
         <h2>Saúde e segurança</h2>
-        <p>
-          O app é uma ferramenta de registro. Ele não prescreve treinos, não faz diagnósticos e não
-          substitui médicos ou profissionais de educação física. As instruções dos exercícios são
-          informativas. Procure orientação profissional antes de começar ou mudar sua rotina e pare
-          se sentir dor ou mal-estar.
-        </p>
+        {/* Texto da ficha por IA pendente de revisão jurídica: só aparece com o recurso ligado. */}
+        {fichasIaAtiva ? (
+          <p>
+            O app é uma ferramenta de registro. Ele não faz diagnósticos e não substitui médicos ou profissionais de
+            educação física. A ficha montada por IA, no Premium, é uma sugestão automática feita a partir das suas
+            respostas, sem avaliação individual, e não é prescrição de um profissional: revise antes de usar e ajuste
+            as cargas ao seu nível. Ela não é oferecida a quem informa lesão, dor ou condição de saúde. As instruções
+            dos exercícios são informativas. Procure orientação profissional antes de começar ou mudar sua rotina e
+            pare se sentir dor ou mal-estar.
+          </p>
+        ) : (
+          <p>
+            O app é uma ferramenta de registro. Ele não prescreve treinos, não faz diagnósticos e não
+            substitui médicos ou profissionais de educação física. As instruções dos exercícios são
+            informativas. Procure orientação profissional antes de começar ou mudar sua rotina e pare
+            se sentir dor ou mal-estar.
+          </p>
+        )}
       </section>
       <section>
         <h2>Sua conta</h2>

@@ -190,8 +190,16 @@ export function mesDaCota(agora: Date = new Date()): string {
   return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/** Análises já usadas no mês. Um contador de outro mês já não vale. */
-export function analisesUsadas(uso: { mes?: unknown; analises?: unknown } | null, agora: Date = new Date()): number {
-  if (!uso || uso.mes !== mesDaCota(agora) || typeof uso.analises !== "number") return 0;
-  return uso.analises;
+/** O que cada função de IA consome. Ficam juntos em `users/{uid}/uso/ia`. */
+export type RecursoDeIA = "analises" | "fichas";
+
+export type UsoDeIA = { mes?: unknown } & Partial<Record<RecursoDeIA, unknown>>;
+
+/** Quanto já foi usado no mês. Um contador de outro mês já não vale. */
+export function usadasNoMes(uso: UsoDeIA | null, recurso: RecursoDeIA, agora: Date = new Date()): number {
+  const valor = uso?.[recurso];
+  if (!uso || uso.mes !== mesDaCota(agora) || typeof valor !== "number") return 0;
+  return valor;
 }
+
+export const analisesUsadas = (uso: UsoDeIA | null, agora: Date = new Date()) => usadasNoMes(uso, "analises", agora);

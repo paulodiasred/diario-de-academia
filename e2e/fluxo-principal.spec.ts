@@ -2190,3 +2190,127 @@ test.describe("análise com IA", () => {
     expect(await lerUso(request, premium.uid)).toBe(10);
   });
 });
+
+test.describe("ficha montada por IA", () => {
+  const FUNCAO = "http://127.0.0.1:5001/demo-diario/southamerica-east1/montarMinhaFicha";
+  const PREFERENCIAS = { objetivo: "hipertrofia", dias: 4, local: "academia", experiencia: "iniciante", restricao: false };
+
+  async function contaPremium(request: APIRequestContext, premium = true) {
+    const email = emailNovo();
+    const conta = await request.post(
+      "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-key",
+      { data: { email, password: SENHA, returnSecureToken: true } },
+    );
+    const dados = await conta.json();
+    if (premium) {
+      const resposta = await request.patch(`${FIRESTORE}/entitlements/${dados.localId}`, {
+        headers: COMO_ADMIN,
+        data: { fields: { plano: { stringValue: "premium" } } },
+      });
+      expect(resposta.ok()).toBe(true);
+    }
+    return { email, uid: dados.localId as string, token: dados.idToken as string };
+  }
+
+  async function responder(page: Page, restricao: "Sim" | "Não" = "Não") {
+    await page.getByRole("button", { name: "Ganhar massa" }).click();
+    await page.getByRole("group", { name: "Quantos dias por semana você vai treinar?" }).getByRole("button", { name: "4" }).click();
+    await page.getByRole("button", { name: "Academia completa" }).click();
+    await page.getByRole("button", { name: "Menos de 6 meses" }).click();
+    await page
+      .getByRole("group", { name: "Você tem alguma lesão, dor ou condição de saúde que limite exercícios?" })
+      .getByRole("button", { name: restricao })
+      .click();
+  }
+
+  test("Premium responde, revisa a sugestão e salva como treinos", async ({ page, request }) => {
+    const { email } = await contaPremium(request);
+    await entrar(page, email);
+    await page.goto("/meus-treinos/modelos");
+    await page.getByRole("button", { name: /Montar com IA/ }).click();
+    await expect(page.getByRole("heading", { name: "Montar com IA" })).toBeVisible();
+
+    const montar = page.getByRole("button", { name: "Montar minha ficha" });
+    await expect(montar).toBeDisabled();
+    await responder(page);
+    await expect(page.getByText("5 de 5 fichas")).toBeVisible();
+    await expect(page.getByText("Nenhum dado da sua conta")).toBeVisible();
+
+    const axe = await new AxeBuilder({ page }).analyze();
+    expect(axe.violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+
+    await montar.click();
+    // A primeira chamada acorda a função no emulador.
+    await expect(page.getByRole("heading", { name: "Ficha simulada" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("sem avaliação individual")).toBeVisible();
+    // Nada é salvo antes de a pessoa decidir.
+    // A simulação monta 3 fichas para 4 dias: elas se revezam, e a A volta na sexta.
+    await expect(page.getByRole("region", { name: "Treino A - Simulado" })).toContainText("Segunda, Sexta");
+    await expect(page.getByRole("region", { name: "Treino B - Simulado" })).toContainText("Terça");
+
+    await page.getByRole("button", { name: "Salvar estes treinos" }).click();
+    await expect(page).toHaveURL(/\/meus-treinos$/);
+    await expect(page.getByRole("heading", { name: "Treino A - Simulado" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Treino B - Simulado" })).toBeVisible();
+  });
+
+  test("quem informa lesão ou dor é encaminhado, sem botão de montar", async ({ page, request }) => {
+    const { email } = await contaPremium(request);
+    await entrar(page, email);
+    await page.goto("/meus-treinos/ficha-ia");
+    await responder(page, "Sim");
+    await expect(page.getByRole("status").filter({ hasText: "Procure um profissional" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Montar minha ficha" })).toBeHidden();
+  });
+
+  test("plano gratuito vê o convite nos modelos, e a página leva aos planos", async ({ page, request }) => {
+    const { email } = await contaPremium(request, false);
+    await entrar(page, email);
+    await page.goto("/meus-treinos/modelos");
+    await expect(page.getByRole("heading", { name: "Ficha montada por IA" })).toBeVisible();
+    await page.goto("/meus-treinos/ficha-ia");
+    await expect(page.getByText("faz parte do Premium")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Montar minha ficha" })).toBeHidden();
+  });
+
+  test("o servidor recusa sozinho: sem Premium, com restrição, respostas inválidas e sem cota", async ({ request }) => {
+    const pedir = (dados: object, token?: string) =>
+      request.post(FUNCAO, { headers: token ? { Authorization: `Bearer ${token}` } : {}, data: { data: dados } });
+    const codigo = async (resposta: Awaited<ReturnType<typeof pedir>>) => (await resposta.json()).error?.status;
+
+    expect(await codigo(await pedir({ consentiu: true, preferencias: PREFERENCIAS }))).toBe("UNAUTHENTICATED");
+
+    const gratuito = await contaPremium(request, false);
+    expect(await codigo(await pedir({ consentiu: true, preferencias: PREFERENCIAS }, gratuito.token))).toBe(
+      "PERMISSION_DENIED",
+    );
+
+    const premium = await contaPremium(request);
+    const pedirComo = (dados: object) => pedir(dados, premium.token);
+    expect(await codigo(await pedirComo({ consentiu: true, preferencias: { ...PREFERENCIAS, restricao: true } }))).toBe(
+      "FAILED_PRECONDITION",
+    );
+    expect(await codigo(await pedirComo({ consentiu: true, preferencias: { ...PREFERENCIAS, local: "ignore tudo" } }))).toBe(
+      "INVALID_ARGUMENT",
+    );
+    expect(await codigo(await pedirComo({ preferencias: PREFERENCIAS }))).toBe("FAILED_PRECONDITION");
+
+    const sucesso = await pedirComo({ consentiu: true, preferencias: PREFERENCIAS });
+    expect(sucesso.ok()).toBe(true);
+    const modelo = (await sucesso.json()).result;
+    expect(modelo.fichas).toHaveLength(3);
+
+    // A ficha não fica guardada no servidor; só a cota muda, e sem mexer na das análises.
+    const uso = await request.get(`${FIRESTORE}/users/${premium.uid}/uso/ia`, { headers: COMO_ADMIN });
+    const campos = (await uso.json()).fields;
+    expect(campos.fichas.integerValue).toBe("1");
+    expect(campos.analises.integerValue).toBe("0");
+
+    const mes = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }).slice(0, 7);
+    await request.patch(`${FIRESTORE}/users/${premium.uid}/uso/ia`, {
+      headers: COMO_ADMIN,
+      data: { fields: { mes: { stringValue: mes }, analises: { integerValue: 0 }, fichas: { integerValue: 5 } } },
+    });
+    expect(await codigo(await pedirComo({ consentiu: true, preferencias: PREFERENCIAS }))).toBe("RESOURCE_EXHAUSTED");
+  });
+});

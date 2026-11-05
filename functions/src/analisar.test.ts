@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Sessao } from "@/domain/sessao";
-import { analisarTreinos, ErroDaAnalise, type DependenciasDaAnalise } from "./analisar";
+import { analisarTreinos, type DependenciasDaAnalise } from "./analisar";
+import type { ErroDaIA } from "./erros";
 
 const AGORA = new Date(2026, 10, 30, 12);
 
@@ -39,7 +40,7 @@ const pedido = { uid: "u1", consentiu: true, agora: AGORA };
 const codigoDe = (promessa: Promise<unknown>) =>
   promessa.then(
     () => "sem erro",
-    (e: ErroDaAnalise) => e.codigo,
+    (e: ErroDaIA) => e.codigo,
   );
 
 describe("análise de treinos", () => {

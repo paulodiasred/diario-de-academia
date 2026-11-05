@@ -1,12 +1,10 @@
 import { useMemo, useState } from "react";
-import catalogoData from "@/exercises/exercises-ptbr-partial-translation.json";
 import { buscarExercicios, pertenceAoGrupo } from "@/domain/catalogo";
-import { aplicarCuradoria } from "@/domain/curadoriaCatalogo";
+import { catalogo } from "@/data/catalogo";
 import type { ExercicioCatalogo } from "@/types/catalogo";
 import { useExerciciosProprios } from "./useExerciciosProprios";
 
-/** O catálogo como a pessoa o vê: nomes corrigidos e exercícios acrescentados. */
-export const catalogo = aplicarCuradoria(catalogoData as ExercicioCatalogo[]);
+export { catalogo };
 
 export interface FiltrosCatalogo {
   busca: string;

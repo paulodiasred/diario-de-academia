@@ -9,11 +9,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMigracaoLegado } from "@/hooks/useMigracaoLegado";
 import { useSessaoAtiva } from "@/hooks/useSessaoAtiva";
 import { mostraTreinoAtivo, nomeDaTela, tituloDaPagina } from "@/lib/navegacao";
+import { fichasIaAtiva } from "@/lib/recursos";
 
 const Index = lazy(() => import("./pages/Index"));
 const MeusTreinos = lazy(() => import("./pages/MeusTreinos"));
 const CriarEditarTreino = lazy(() => import("./pages/CriarEditarTreino"));
 const Modelos = lazy(() => import("./pages/Modelos"));
+const FichaIA = lazy(() => import("./pages/FichaIA"));
 const Treino = lazy(() => import("./pages/Treino"));
 const ResumoTreino = lazy(() => import("./pages/ResumoTreino"));
 const Exercicios = lazy(() => import("./pages/Exercicios"));
@@ -86,6 +88,7 @@ function Conteudo() {
               <Route path="/meus-treinos" element={<MeusTreinos />} />
               <Route path="/meus-treinos/criar" element={<CriarEditarTreino />} />
               <Route path="/meus-treinos/modelos" element={<Modelos />} />
+              {fichasIaAtiva && <Route path="/meus-treinos/ficha-ia" element={<FichaIA />} />}
               <Route path="/meus-treinos/editar/:id" element={<CriarEditarTreino />} />
               {/* Endereço antigo da tela de treino: pode estar em favoritos. */}
               <Route path="/meus-treinos/:id" element={<Navigate to="/meus-treinos" replace />} />
