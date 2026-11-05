@@ -1993,3 +1993,200 @@ test.describe("lançamento", () => {
     });
   }
 });
+
+test.describe("análise com IA", () => {
+  const FUNCAO = "http://127.0.0.1:5001/demo-diario/southamerica-east1/analisarMeusTreinos";
+  const CARTAO = (page: Page) => page.getByRole("region", { name: "Análise com IA" });
+  const BOTAO = "Analisar meus últimos 30 dias";
+  const mesAtual = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }).slice(0, 7);
+
+  async function contaPorApi(request: APIRequestContext) {
+    const email = emailNovo();
+    const conta = await request.post(
+      "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-key",
+      { data: { email, password: SENHA, returnSecureToken: true } },
+    );
+    const dados = await conta.json();
+    return { email, uid: dados.localId as string, token: dados.idToken as string };
+  }
+
+  async function gravar(request: APIRequestContext, caminho: string, fields: object) {
+    const resposta = await request.patch(`${FIRESTORE}/${caminho}`, { headers: COMO_ADMIN, data: { fields } });
+    expect(resposta.ok()).toBe(true);
+  }
+
+  const virarPremium = (request: APIRequestContext, uid: string) =>
+    gravar(request, `entitlements/${uid}`, { plano: { stringValue: "premium" } });
+
+  const lista = (...values: object[]) => ({ arrayValue: { values } });
+  const mapa = (fields: object) => ({ mapValue: { fields } });
+
+  async function semearTreinos(request: APIRequestContext, uid: string, quantidade: number) {
+    for (let i = 1; i <= quantidade; i += 1) {
+      const data = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString();
+      const serie = mapa({
+        peso: { integerValue: 60 + i },
+        reps: { integerValue: 10 },
+        duracaoSeg: { nullValue: null },
+        distanciaM: { nullValue: null },
+        concluida: { booleanValue: true },
+        concluidaEm: { nullValue: null },
+        editada: { booleanValue: false },
+      });
+      const exercicio = mapa({
+        exercicioId: { stringValue: "supino" },
+        nome: { stringValue: "Supino Reto" },
+        medida: { stringValue: "carga_reps" },
+        descanso: { integerValue: 60 },
+        notas: { stringValue: "" },
+        primaryMuscles: lista({ stringValue: "chest" }),
+        series: lista(serie),
+      });
+      await gravar(request, `users/${uid}/sessions/s${i}`, {
+        treinoId: { nullValue: null },
+        nome: { stringValue: "Treino A" },
+        iniciadaEm: { timestampValue: data },
+        finalizadaEm: { timestampValue: data },
+        atualizadaEm: { stringValue: data },
+        origem: { stringValue: "app" },
+        notas: { stringValue: "" },
+        exercicios: lista(exercicio),
+      });
+    }
+  }
+
+  async function abrirResumo(page: Page, email: string) {
+    await entrar(page, email);
+    await page.goto("/evolucao");
+  }
+
+  const lerUso = async (request: APIRequestContext, uid: string) => {
+    const resposta = await request.get(`${FIRESTORE}/users/${uid}/uso/ia`, { headers: COMO_ADMIN });
+    if (!resposta.ok()) return null;
+    return Number((await resposta.json()).fields.analises.integerValue);
+  };
+
+  test("Premium confirma o envio, vê a análise e pode apagar", async ({ page, request }) => {
+    const { email, uid } = await contaPorApi(request);
+    await virarPremium(request, uid);
+    await semearTreinos(request, uid, 4);
+    await abrirResumo(page, email);
+
+    const cartao = CARTAO(page);
+    await expect(cartao).toContainText("10 de 10 análises");
+    await cartao.getByRole("button", { name: BOTAO }).click();
+
+    // Antes do primeiro envio, diz o que vai e o que não vai.
+    const aviso = page.getByRole("alertdialog");
+    await expect(aviso).toContainText("Anthropic");
+    await expect(aviso).toContainText("suas observações");
+    await aviso.getByRole("button", { name: "Agora não" }).click();
+    expect(await lerUso(request, uid)).toBeNull();
+
+    await cartao.getByRole("button", { name: BOTAO }).click();
+    await page.getByRole("button", { name: "Enviar e analisar" }).click();
+    // A primeira chamada acorda a função no emulador.
+    await expect(cartao).toContainText("Você fez 4 treinos em 30 dias.", { timeout: 30_000 });
+    await expect(cartao).toContainText("Supino Reto");
+    await expect(cartao).toContainText("Gerada por IA");
+    await expect(cartao).toContainText("9 de 10 análises");
+    expect(await lerUso(request, uid)).toBe(1);
+
+    const axe = await new AxeBuilder({ page }).include('[aria-label="Análise com IA"]').analyze();
+    expect(axe.violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+
+    // Fica guardada, e a próxima não pergunta de novo.
+    await page.reload();
+    await expect(cartao).toContainText("Você fez 4 treinos em 30 dias.");
+    await cartao.getByRole("button", { name: BOTAO }).click();
+    await expect(cartao).toContainText("8 de 10 análises");
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+
+    await cartao.getByRole("button", { name: "Apagar análise" }).click();
+    await expect(cartao).not.toContainText("Você fez 4 treinos");
+    await page.reload();
+    await expect(cartao).toContainText("8 de 10 análises");
+    await expect(cartao).not.toContainText("Você fez 4 treinos");
+  });
+
+  test("com poucos treinos, explica o que falta e não oferece o botão", async ({ page, request }) => {
+    const { email, uid } = await contaPorApi(request);
+    await virarPremium(request, uid);
+    await semearTreinos(request, uid, 3);
+    await abrirResumo(page, email);
+
+    await expect(CARTAO(page)).toContainText("Você fez 3 até agora");
+    await expect(page.getByRole("button", { name: BOTAO })).toBeHidden();
+  });
+
+  test("cota esgotada desativa o botão", async ({ page, request }) => {
+    const { email, uid } = await contaPorApi(request);
+    await virarPremium(request, uid);
+    await semearTreinos(request, uid, 4);
+    await gravar(request, `users/${uid}/uso/ia`, { mes: { stringValue: mesAtual() }, analises: { integerValue: 10 } });
+    await abrirResumo(page, email);
+
+    await expect(CARTAO(page)).toContainText("Você usou todas as análises deste mês.");
+    await expect(page.getByRole("button", { name: BOTAO })).toBeDisabled();
+  });
+
+  test("sem sinal, avisa e não gera nada", async ({ page, request }) => {
+    const { email, uid } = await contaPorApi(request);
+    await virarPremium(request, uid);
+    await semearTreinos(request, uid, 4);
+    await abrirResumo(page, email);
+
+    await page.route("**/analisarMeusTreinos", (rota) => rota.abort("internetdisconnected"));
+    await CARTAO(page).getByRole("button", { name: BOTAO }).click();
+    await page.getByRole("button", { name: "Enviar e analisar" }).click();
+    await expect(page.getByText("Não foi possível gerar a análise.")).toBeVisible();
+    await expect(CARTAO(page)).not.toContainText("Gerada por IA");
+    await expect(CARTAO(page)).toContainText("10 de 10 análises");
+  });
+
+  test("plano gratuito vê o convite, sem o botão", async ({ page, request }) => {
+    const { email, uid } = await contaPorApi(request);
+    await semearTreinos(request, uid, 4);
+    await abrirResumo(page, email);
+
+    await expect(page.getByRole("heading", { name: "Análise com IA" })).toBeVisible();
+    await expect(page.getByRole("button", { name: BOTAO })).toBeHidden();
+    await page.goto("/planos");
+    await expect(page.getByText("Análise dos treinos com IA")).toBeVisible();
+  });
+
+  test("o servidor recusa sozinho, mesmo chamado direto, sem passar pela tela", async ({ request }) => {
+    const pedir = (dados: object, token?: string) =>
+      request.post(FUNCAO, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        data: { data: dados },
+      });
+    const codigo = async (resposta: Awaited<ReturnType<typeof pedir>>) => (await resposta.json()).error?.status;
+
+    expect(await codigo(await pedir({ consentiu: true }))).toBe("UNAUTHENTICATED");
+
+    const gratuito = await contaPorApi(request);
+    await semearTreinos(request, gratuito.uid, 4);
+    expect(await codigo(await pedir({ consentiu: true }, gratuito.token))).toBe("PERMISSION_DENIED");
+    expect(await lerUso(request, gratuito.uid)).toBeNull();
+
+    const premium = await contaPorApi(request);
+    await virarPremium(request, premium.uid);
+    await semearTreinos(request, premium.uid, 3);
+    expect(await codigo(await pedir({ consentiu: true }, premium.token))).toBe("FAILED_PRECONDITION");
+    await semearTreinos(request, premium.uid, 4);
+    expect(await codigo(await pedir({}, premium.token))).toBe("FAILED_PRECONDITION");
+    expect(await lerUso(request, premium.uid)).toBeNull();
+
+    // Cota do mês no limite: o servidor não confia no que o app acha.
+    const uso = (analises: number) => ({ mes: { stringValue: mesAtual() }, analises: { integerValue: analises } });
+    await gravar(request, `users/${premium.uid}/uso/ia`, uso(10));
+    expect(await codigo(await pedir({ consentiu: true }, premium.token))).toBe("RESOURCE_EXHAUSTED");
+
+    await gravar(request, `users/${premium.uid}/uso/ia`, uso(9));
+    const sucesso = await pedir({ consentiu: true }, premium.token);
+    expect(sucesso.ok()).toBe(true);
+    expect((await sucesso.json()).result.resumo).toContain("4 treinos");
+    expect(await lerUso(request, premium.uid)).toBe(10);
+  });
+});

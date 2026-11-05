@@ -7,6 +7,9 @@ export const LIMITES_GRATUITO = {
   exercicios: 10,
 } as const;
 
+/** Garantida pela Cloud Function, que é quem paga cada análise. */
+export const COTA_MENSAL_DE_ANALISES = 10;
+
 export type RecursoLimitado = keyof typeof LIMITES_GRATUITO;
 
 export interface Assinatura {
@@ -41,6 +44,13 @@ export class LimiteDoPlano extends Error {
     this.name = "LimiteDoPlano";
   }
 }
+
+/** Fora da lista até a função de IA ser publicada: a tabela só mostra o que existe de verdade. */
+export const LINHA_ANALISE_IA = {
+  recurso: "Análise dos treinos com IA",
+  gratuito: "Não",
+  premium: `Até ${COTA_MENSAL_DE_ANALISES} por mês`,
+};
 
 /** Comparação mostrada na tela de planos. Só lista o que existe de verdade no app. */
 export const COMPARACAO_PLANOS: Array<{ recurso: string; gratuito: string; premium: string }> = [

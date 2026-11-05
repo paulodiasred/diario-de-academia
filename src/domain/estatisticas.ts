@@ -85,6 +85,12 @@ export function resumoDoMes(sessoes: Sessao[], agora: Date = new Date()): Resumo
   );
 }
 
+/** Sessões dos últimos `dias`, contando hoje inteiro: o mesmo corte de `compararPeriodos`. */
+export function sessoesDosUltimosDias(sessoes: Sessao[], dias: number, agora: Date = new Date()): Sessao[] {
+  const fim = somarDias(agora, 1);
+  return entre(sessoes, somarDias(fim, -dias), fim);
+}
+
 export interface ComparacaoPeriodos {
   atual: ResumoPeriodo;
   anterior: ResumoPeriodo;
@@ -192,7 +198,7 @@ function emOrdemCronologica(sessoes: Sessao[]): Sessao[] {
  * inclusive em cadeia. Renomear não divide a evolução, e registros antigos, que só têm o nome,
  * continuam ligados aos novos.
  */
-function identificarExercicios(sessoes: Sessao[]): (e: ExercicioSessao) => string {
+export function identificarExercicios(sessoes: Sessao[]): (e: ExercicioSessao) => string {
   const pai = new Map<string, string>();
   const raiz = (chave: string): string => {
     let atual = chave;

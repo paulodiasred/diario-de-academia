@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Cabecalho } from "@/components/Cabecalho";
 import { buttonVariants } from "@/components/ui/button";
-import { COMPARACAO_PLANOS } from "@/domain/planos";
+import { COMPARACAO_PLANOS, LINHA_ANALISE_IA } from "@/domain/planos";
+import { iaAtiva } from "@/lib/recursos";
 import { useAuth } from "@/hooks/useAuth";
 import { usePlano } from "@/hooks/usePlano";
 import { linkPedidoPremium } from "@/lib/contato";
@@ -30,7 +31,7 @@ const Planos = () => {
             </tr>
           </thead>
           <tbody>
-            {COMPARACAO_PLANOS.map((linha) => (
+            {(iaAtiva ? [...COMPARACAO_PLANOS, LINHA_ANALISE_IA] : COMPARACAO_PLANOS).map((linha) => (
               <tr key={linha.recurso} className="border-t border-border/60 align-top">
                 <td className="p-3">{linha.recurso}</td>
                 <td className="p-3 text-muted-foreground">{linha.gratuito}</td>

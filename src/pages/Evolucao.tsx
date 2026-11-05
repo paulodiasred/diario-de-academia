@@ -22,6 +22,8 @@ import {
 } from "@/domain/estatisticas";
 import { formatarDuracao, formatarKg, formatarVolume, normalizarBusca } from "@/domain/texto";
 import { RecursoPremium } from "@/components/RecursoPremium";
+import { AnaliseTreinos } from "@/components/ia/AnaliseTreinos";
+import { iaAtiva } from "@/lib/recursos";
 import { SecaoConquistas } from "@/components/SecaoConquistas";
 import { SecaoMetas } from "@/components/SecaoMetas";
 import { usePlano } from "@/hooks/usePlano";
@@ -148,6 +150,16 @@ const Evolucao = () => {
         </TabsList>
 
         <TabsContent value="resumo" className="mt-4 space-y-4">
+          {iaAtiva &&
+            (premium ? (
+              <AnaliseTreinos sessoes={sessoes} />
+            ) : (
+              <RecursoPremium
+                titulo="Análise com IA"
+                descricao="Uma leitura do que mudou nos seus últimos 30 dias."
+              />
+            ))}
+
           {/* Comparação entre períodos */}
           <section aria-label="Comparação entre períodos" className="space-y-3">
             <div role="group" aria-label="Período" className="grid grid-cols-3 gap-1.5 lg:max-w-md">

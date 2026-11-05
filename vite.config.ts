@@ -68,6 +68,8 @@ export default defineConfig({
   ],
   // O catálogo tem 900 KB: como texto com JSON.parse, abre mais rápido do que como código.
   json: { stringify: true },
+  // Só é importado ao pedir uma análise: descobri-lo nessa hora faria o servidor de desenvolvimento recarregar.
+  optimizeDeps: { include: ["firebase/functions"] },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

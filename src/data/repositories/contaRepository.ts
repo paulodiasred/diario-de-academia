@@ -8,6 +8,7 @@ import {
   type DocumentReference,
 } from "firebase/firestore";
 import { db } from "@/lib/firestore";
+import { lerAnalise } from "./analiseRepository";
 import { listarExerciciosProprios } from "./exerciciosRepository";
 import { listarMetas } from "./metasRepository";
 import { listarRegistrosLegados } from "./registrosRepository";
@@ -19,13 +20,14 @@ const TAMANHO_LOTE = 400;
 
 /** Tudo o que o app guarda sobre a conta, em um arquivo: acesso e portabilidade (LGPD). */
 export async function montarExportacaoCompleta(uid: string, email: string | null) {
-  const [perfil, sessoes, treinos, exercicios, metas, registrosAntigos] = await Promise.all([
+  const [perfil, sessoes, treinos, exercicios, metas, registrosAntigos, analiseIA] = await Promise.all([
     lerPerfil(uid),
     listarSessoes(uid),
     listarTreinos(uid),
     listarExerciciosProprios(uid),
     listarMetas(uid),
     listarRegistrosLegados(uid),
+    lerAnalise(uid),
   ]);
   return {
     formato: "diario-de-academia",
@@ -38,12 +40,13 @@ export async function montarExportacaoCompleta(uid: string, email: string | null
     exerciciosProprios: exercicios,
     metas,
     registrosAntigos,
+    analiseIA,
   };
 }
 
 /**
- * Apaga os dados da conta. `uso/contadores` fica: as regras não deixam apagar, senão
- * apagar o contador burlaria o limite do plano. Só tem números e um ID, sem dado de treino,
+ * Apaga os dados da conta. `uso/contadores` e `uso/ia` ficam: as regras não deixam apagar,
+ * senão apagar burlaria o limite do plano. Só têm números e um ID, sem dado de treino,
  * e deve sair com uma Cloud Function ao excluir a conta (pendência da Fase 6).
  */
 export async function excluirDadosDaConta(uid: string): Promise<void> {
@@ -58,6 +61,7 @@ export async function excluirDadosDaConta(uid: string): Promise<void> {
   const alvos: DocumentReference[] = [
     ...[registros, treinos, sessoes, exercicios, metas].flatMap((snap) => snap.docs.map((d) => d.ref)),
     doc(db, "users", uid, "activeSession", "current"),
+    doc(db, "users", uid, "analises", "ultima"),
     doc(db, "users", uid),
   ];
 

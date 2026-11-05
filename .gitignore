@@ -17,6 +17,11 @@ dev-dist
 .env.*
 !.env.example
 !.env.emulador
+!functions/.env.demo-diario
+
+# Cloud Functions: pacote gerado e chave local
+functions/lib
+functions/.secret.local
 
 # Firebase e testes
 .firebase

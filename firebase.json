@@ -3,8 +3,15 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22",
+    "predeploy": ["npm --prefix functions run build"],
+    "ignore": ["node_modules", "src", "build.mjs", "tsconfig.json", ".env.demo-diario", ".secret.local"]
+  },
   "emulators": {
     "auth": { "host": "127.0.0.1", "port": 9099 },
+    "functions": { "host": "127.0.0.1", "port": 5001 },
     "firestore": { "host": "127.0.0.1", "port": 8080 },
     "ui": { "enabled": false },
     "singleProjectMode": true

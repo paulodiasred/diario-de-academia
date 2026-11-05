@@ -167,10 +167,17 @@ service cloud.firestore {
         allow update: if false;
       }
 
+      // A análise é gravada só pelo servidor. A pessoa lê e pode apagar: os dados são dela.
+      match /analises/{id} {
+        allow read, delete: if ehOUsuario(uid);
+        allow create, update: if false;
+      }
+
       // Só muda junto com a criação ou exclusão real do documento, nunca sozinho.
       // Não pode ser apagado: apagar zeraria a contagem e burlaria o limite.
+      // uso/ia é a cota da IA: só o servidor grava, por isso o cliente só lê.
       match /uso/{id} {
-        allow read: if ehOUsuario(uid) && id == 'contadores';
+        allow read: if ehOUsuario(uid) && id in ['contadores', 'ia'];
         allow create, update: if ehOUsuario(uid) && id == 'contadores'
           && request.resource.data.keys().hasOnly(['treinos', 'exercicios', 'ultimoId'])
           && request.resource.data.ultimoId is string

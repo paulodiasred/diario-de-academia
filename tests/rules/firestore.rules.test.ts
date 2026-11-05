@@ -577,3 +577,44 @@ describe("compatibilidade com o que o app grava", () => {
     await assertSucceeds(deleteDoc(doc(db, "registros", "antigo")));
   });
 });
+
+describe("análise com IA", () => {
+  const uso = (db: Firestore, uid = "ana") => doc(db, "users", uid, "uso", "ia");
+  const analise = (db: Firestore, uid = "ana") => doc(db, "users", uid, "analises", "ultima");
+
+  it("a pessoa lê a própria cota, mas não altera nem apaga", async () => {
+    await semear("users/ana/uso", "ia", { mes: "2026-11", analises: 10 });
+    const db = comoAna();
+    await assertSucceeds(getDoc(uso(db)));
+    await assertFails(setDoc(uso(db), { mes: "2026-11", analises: 0 }));
+    await assertFails(setDoc(uso(db), { mes: "2020-01", analises: 0, treinos: 0, exercicios: 0, ultimoId: "x" }));
+    await assertFails(updateDoc(uso(db), { analises: 0 }));
+    await assertFails(deleteDoc(uso(db)));
+  });
+
+  it("ninguém cria a cota do zero pelo app", async () => {
+    await assertFails(setDoc(uso(comoAna()), { mes: "2026-11", analises: 0 }));
+  });
+
+  it("outra pessoa não vê a cota", async () => {
+    await semear("users/ana/uso", "ia", { mes: "2026-11", analises: 1 });
+    await assertFails(getDoc(uso(comoBia(), "ana")));
+    await assertFails(getDoc(uso(anonimo(), "ana")));
+  });
+
+  it("a pessoa lê e apaga a própria análise, mas não escreve uma", async () => {
+    await semear("users/ana/analises", "ultima", { resumo: "ok" });
+    const db = comoAna();
+    await assertSucceeds(getDoc(analise(db)));
+    await assertFails(setDoc(analise(db), { resumo: "inventada" }));
+    await assertFails(updateDoc(analise(db), { resumo: "inventada" }));
+    await assertSucceeds(deleteDoc(analise(db)));
+  });
+
+  it("outra pessoa não lê nem apaga a análise", async () => {
+    await semear("users/ana/analises", "ultima", { resumo: "ok" });
+    await assertFails(getDoc(analise(comoBia(), "ana")));
+    await assertFails(deleteDoc(analise(comoBia(), "ana")));
+    await assertFails(getDoc(analise(anonimo(), "ana")));
+  });
+});

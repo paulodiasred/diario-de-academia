@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { EMAIL_CONTATO } from "@/lib/contato";
+import { iaAtiva } from "@/lib/recursos";
 
 const CONTATO = EMAIL_CONTATO;
 const ATUALIZADO_EM = "novembro de 2026";
@@ -63,6 +64,14 @@ export function Privacidade() {
             para corrigir falhas. Não enviamos seu email, seu nome nem seus treinos. Pode haver armazenamento
             fora do Brasil.
           </li>
+          {iaAtiva && (
+            <li>
+              Anthropic: só se você pedir uma análise com IA, no Premium, e confirmar o envio. Recebe os totais do
+              período e o nome, as cargas e as repetições dos seus exercícios, sem seu nome, seu email, suas
+              observações ou os nomes dos seus treinos. Fica fora do Brasil. A última análise fica guardada na sua
+              conta até você apagá-la ou gerar outra.
+            </li>
+          )}
           <li>No seu aparelho: uma cópia para o app funcionar sem internet, apagada quando você sai da conta.</li>
         </ul>
       </section>
@@ -78,7 +87,7 @@ export function Privacidade() {
         <h2>O que sobra depois de excluir a conta</h2>
         <p>
           Dois registros técnicos, sem dados de treino, podem continuar no banco: a contagem de itens
-          criados e o registro do plano, ligados a um identificador interno da conta. Para pedir a
+          criados{iaAtiva ? " e de análises" : ""} e o registro do plano, ligados a um identificador interno da conta. Para pedir a
           remoção, use o contato abaixo.
         </p>
       </section>
