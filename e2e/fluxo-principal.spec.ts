@@ -574,6 +574,25 @@ test.describe("dashboard e evolução", () => {
     await page.reload();
     await expect(page.locator("html")).toHaveClass(/light/);
   });
+
+  test("tema automático acompanha o celular, é aplicado e lembrado", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await criarConta(page);
+    await page.getByRole("button", { name: "Ajustes" }).click();
+    await page.getByRole("button", { name: "Automático" }).click();
+    await expect(page.getByText("Automático segue o tema do celular.")).toBeVisible();
+    await expect(page.locator("html")).toHaveClass(/dark/);
+
+    // O celular muda de tema com o app aberto.
+    await page.emulateMedia({ colorScheme: "light" });
+    await expect(page.locator("html")).toHaveClass(/light/);
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(page.locator("html")).toHaveClass(/dark/);
+
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.reload();
+    await expect(page.locator("html")).toHaveClass(/light/);
+  });
 });
 
 test.describe("planos, metas e dados", () => {

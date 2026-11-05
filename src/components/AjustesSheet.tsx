@@ -14,7 +14,7 @@ import { toast } from "@/lib/aviso";
 const TEMAS = [
   { valor: "dark", rotulo: "Escuro" },
   { valor: "light", rotulo: "Claro" },
-  { valor: "system", rotulo: "Sistema" },
+  { valor: "system", rotulo: "Automático" },
 ];
 
 const classeOpcao = (ativa: boolean) =>
@@ -89,6 +89,7 @@ export function AjustesSheet({ aberto, onFechar }: AjustesSheetProps) {
                 </button>
               ))}
             </div>
+            <p className="mt-1.5 text-caption text-muted-foreground">Automático segue o tema do celular.</p>
           </fieldset>
 
           {somSuportado() && (
