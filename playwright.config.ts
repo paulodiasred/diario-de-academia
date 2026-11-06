@@ -11,7 +11,8 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
-  reporter: "list",
+  // No CI, o relatório "github" põe cada falha nas anotações do run, legíveis sem baixar o log.
+  reporter: process.env.CI ? [["list"], ["github"]] : "list",
   use: {
     ...devices["Pixel 7"],
     baseURL: `http://localhost:${PORTA}`,
