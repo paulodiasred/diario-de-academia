@@ -6,9 +6,11 @@ const PORTA = 5199;
 
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 60_000,
+  // A máquina do CI é mais lenta e também roda o emulador de funções: mais folga lá.
+  // Teste novo deve passar aqui com o padrão; CPU_LENTA=2 imita o CI.
+  timeout: process.env.CI ? 120_000 : 60_000,
   // A primeira página compila sob demanda no servidor de desenvolvimento.
-  expect: { timeout: 10_000 },
+  expect: { timeout: process.env.CI ? 20_000 : 10_000 },
   fullyParallel: false,
   workers: 1,
   // No CI, o relatório "github" põe cada falha nas anotações do run, legíveis sem baixar o log.
@@ -16,7 +18,7 @@ export default defineConfig({
   use: {
     ...devices["Pixel 7"],
     baseURL: `http://localhost:${PORTA}`,
-    actionTimeout: 10_000,
+    actionTimeout: process.env.CI ? 20_000 : 10_000,
     trace: "retain-on-failure",
   },
   webServer: {

@@ -16,11 +16,17 @@ const DOMINIOS_REAIS = new Set([
   "www.googleapis.com",
 ]);
 
-test.beforeEach(async ({ context }) => {
+test.beforeEach(async ({ context, page }) => {
   await context.route(
     (url) => DOMINIOS_REAIS.has(url.hostname),
     (rota) => rota.abort("blockedbyclient"),
   );
+  // CPU_LENTA=4 imita a máquina do CI, mais lenta, para reproduzir falhas de tempo.
+  const lenta = Number(process.env.CPU_LENTA ?? 0);
+  if (lenta > 1) {
+    const cdp = await context.newCDPSession(page);
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: lenta });
+  }
 });
 
 async function criarConta(page: Page) {
@@ -240,10 +246,11 @@ test.describe("treino em andamento", () => {
 
     await context.setOffline(false);
     const url = page.url();
+    // Na máquina lenta do CI, cada recarga demora mais: mais tempo por tentativa e no total.
     await expect(async () => {
       await page.goto(url);
-      await expect(page.getByText("250 kg")).toBeVisible({ timeout: 3_000 });
-    }).toPass({ timeout: 30_000 });
+      await expect(page.getByText("250 kg")).toBeVisible({ timeout: process.env.CI ? 10_000 : 3_000 });
+    }).toPass({ timeout: process.env.CI ? 90_000 : 30_000 });
   });
 
   test("resumo com números reais, último valor recuperado e recorde", async ({ page }) => {
@@ -1131,7 +1138,8 @@ test.describe("primeiro treino", () => {
     await acaoDaFicha(page, "Editar", "Arrastar");
 
     const nomes = () => page.getByRole("button", { name: /^Configurar/ }).evaluateAll((b) => b.map((x) => x.getAttribute("aria-label")));
-    expect(await nomes()).toEqual(["Configurar Supino Inclinado com Halteres", "Configurar Abdominal 3/4"]);
+    // A tela de edição carrega sob demanda: espera a lista existir antes de ler.
+    await expect.poll(nomes).toEqual(["Configurar Supino Inclinado com Halteres", "Configurar Abdominal 3/4"]);
 
     const alca = page.getByTestId("arrastar-Incline_Dumbbell_Press");
     const caixa = (await alca.boundingBox())!;
@@ -1411,6 +1419,8 @@ test.describe("treino com uma mão", () => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await acaoDaFicha(page, "Excluir", "Treino de teste");
     await page.keyboard.press("Escape");
+    // Enquanto o diálogo fecha, o resto da tela fica oculto para leitores de tela.
+    await expect(page.getByRole("alertdialog")).toBeHidden();
 
     await barra.click();
     await expect(page).toHaveURL(/\/treino$/);
